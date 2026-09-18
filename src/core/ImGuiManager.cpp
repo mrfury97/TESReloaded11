@@ -1127,6 +1127,10 @@ static bool ShouldHideKey(const char* key) {
 	// RimScalar only feeds Includes/Skin.hlsl's Skin(), which nothing currently calls -- dead
 	// control, hidden rather than left as a live-looking slider that does nothing.
 	if (strcmp(key, "RimScalar") == 0) return true;
+	// SpecularPower feeds GetSpecular(), but its result is always multiplied by
+	// SKIN_SPECULAR_STRENGTH, a compile-time #define hardcoded to 0.0f in Includes/Skin.hlsl
+	// with no override anywhere in the NewVegas shader tree -- so the slider has no effect.
+	if (strcmp(key, "SpecularPower") == 0) return true;
 	return false;
 }
 
