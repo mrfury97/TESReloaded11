@@ -755,16 +755,20 @@ Strength = 0.75
 Enabled = false                     # Edge contrast shader to increase detail sharpness.
 
 [_Shaders.Skin.Main]
-Attenuation = 0.84
-CoeffBlue = 0.12
-CoeffGreen = 0.22
-CoeffRed = 0.36
-MaterialThickness = 0.12
+Attenuation = 0.84                  # Overall strength of the translucency term
+CoeffBlue = 0.12                    # Subsurface tint, blue
+CoeffGreen = 0.22                   # Subsurface tint, green
+CoeffRed = 0.36                     # Subsurface tint, red (skin scatters red/orange wavelengths the most)
+MaterialThickness = 0.12            # How thick the skin looks for light transmission (ears, nose, fingers)
 RimScalar = 0.5
 SpecularPower = 0.78
+TranslucencyPower = 2.0             # Falloff sharpness of the terminator glow band (higher = tighter, more focused)
+TranslucencyScale = 2.0             # Brightness multiplier of the terminator glow band
+TranslucencyShadowInfluence = 1.0   # How much forward sun shadows suppress translucency (0 = ignore shadows entirely, 1 = fully shadowed like direct light)
+TranslucencyWidth = 0.3             # Half-width (in N.L) of the terminator band the glow occupies on either side of the light/dark line
 
 [_Shaders.Skin.Status]
-Enabled = false                     # Not currently used. Replaces the skin shader.
+Enabled = true                      # Replaces the skin shader (needed for the translucency lighting above to run).
 
 
 [_Shaders.Sky.Main]

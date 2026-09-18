@@ -62,8 +62,28 @@ float GetSpecular(float3 lightDirection, float3 eyeDirection, float3 normal, flo
     return  pow(shades(normal, normalize(lightDirection + eyeDirection)), TESR_SkinData.y) * luma(lightColor) * SKIN_SPECULAR_STRENGTH;
 }
 
-float GetSSS(float3 lightDirection, float3 normal){
-    return (1 - shades(normal, lightDirection)) * 0.5;//TESR_DebugVar.x;
+// Skin translucency: subsurface light wrapping around the terminator. Physically, thin tissue
+// (nose, ears, cheek edges) lets a little sunlight bleed a short distance past the geometric
+// light/dark line instead of cutting off sharply, and that bled light picks up the skin's warm
+// subsurface colour. Modelled as a band straddling N.L = 0 (TranslucencyWidth wide either side),
+// not a full backlit-hemisphere glow -- so it stays physically coherent with the forward shadow
+// system: an object actually blocking the sun should suppress it same as direct light, since
+// there is no nearby sunlight left to scatter through. View-independent (normal vs. light only),
+// so it reads the same from any camera angle.
+//
+// Callers should scale the result by TranslucencyShadowInfluence, a caller-visible knob (this
+// function does not read TESR_ShadowData itself: see each SKIN*.pso.hlsl's sunShadow handling)
+// letting the sun-shadow multiply be dialled from 0 (translucency ignores shadows) to 1 (fully
+// gated like diffuse), since how much that trade-off matters depends on shadow map resolution
+// and how much of this band ends up flagged self-shadowed near grazing angles.
+float3 GetSkinTranslucency(float3 lightDirection, float3 normal, float3 lightColor) {
+    float ndotl = dot(normal, lightDirection);
+    float width = max(TESR_SkinSSSData.x, 0.001f); // TranslucencyWidth
+    float band = saturate(1 - abs(ndotl) / width);
+    float translucency = pow(band, TESR_SkinSSSData.y) * TESR_SkinSSSData.z; // Power, Scale
+    translucency *= TESR_SkinData.x * TESR_SkinData.z; // Attenuation * MaterialThickness
+
+    return translucency * TESR_SkinColor.rgb * lightColor;
 }
 
 float3 getNormal(float2 uv){

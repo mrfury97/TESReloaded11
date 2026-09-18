@@ -17,6 +17,7 @@ float4 Toggles : register(c27);
 float4 TESR_ReciprocalResolution;
 float4 TESR_SkinData;
 float4 TESR_SkinColor;
+float4 TESR_SkinSSSData;
 float4 TESR_DebugVar;
 
 // Registers:
@@ -84,11 +85,14 @@ VS_OUTPUT main(VS_INPUT IN) {
     float atten2 = tex2D(AttenuationMap, IN.texcoord_4.zw).x;
     float3 pointLightLighting = getPointLight(pointLightDirection, eyeDirection, PBRLight(PSLightColor[2]).rgb, glowTexture, normal, atten1, atten2);
 
-    // calculate lighting components
-    float3 lighting = GetLighting(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
-    float spec = GetSpecular(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
+    // calculate lighting components. No forward-shadow block in this variant, so sss (like
+    // lighting/spec) is never shadow-gated here.
+    float3 sunLightColor = PBRLight(PSLightColor[1]).rgb;
+    float3 lighting = GetLighting(lightDirection, eyeDirection, normal, sunLightColor);
+    float spec = GetSpecular(lightDirection, eyeDirection, normal, sunLightColor);
+    float3 sss = GetSkinTranslucency(lightDirection, normal, sunLightColor);
 
-    lighting += spec + pointLightLighting + PBRAmbient(AmbientColor.rgb);
+    lighting += spec + sss + pointLightLighting + PBRAmbient(AmbientColor.rgb);
     float4 finalColor = float4(lighting * baseColor.rgb, baseColor.a * AmbientColor.a);
     finalColor.rgb = ApplyFog(finalColor.rgb, IN.color_1, Toggles);
 

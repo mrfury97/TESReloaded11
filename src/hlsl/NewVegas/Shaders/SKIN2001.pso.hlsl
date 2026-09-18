@@ -15,6 +15,7 @@ float4 Toggles : register(c27);
 float4 TESR_ReciprocalResolution;
 float4 TESR_SkinData;
 float4 TESR_SkinColor;
+float4 TESR_SkinSSSData;
 float4 TESR_DebugVar;
 
 
@@ -71,8 +72,10 @@ VS_OUTPUT main(VS_INPUT IN) {
     float3 normal = getNormal(IN.BaseUV);
 
 
-    float3 lighting = GetLighting(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[0]).rgb);
-    float spec = GetSpecular(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[0]).rgb);
+    float3 sunLightColor = PBRLight(PSLightColor[0]).rgb;
+    float3 lighting = GetLighting(lightDirection, eyeDirection, normal, sunLightColor);
+    float spec = GetSpecular(lightDirection, eyeDirection, normal, sunLightColor);
+    float3 sss = GetSkinTranslucency(lightDirection, normal, sunLightColor);
 
 
     // Outside the guard: the skylight needs this normal whether or not forward shadows
@@ -80,12 +83,15 @@ VS_OUTPUT main(VS_INPUT IN) {
     float3 shadowNormal = GetShadowGeometricNormal(IN.shadowWorldPos.xyz);
 #if FORWARD_SHADOWS
     // Forward sun shadow. Scales the SUN terms only; ambient-driven terms are untouched.
+    // sss is only partially gated -- TranslucencyShadowInfluence lets the terminator-band glow
+    // stay visible even where the shadow map's grazing-angle self-shadow bias kicks in early.
     // ddx/ddy must stay at top level, outside dynamic flow control.
     float sunShadow = SHADOW_VS_PRESENT(IN.shadowWorldPos.w)
                     ? GetSunShadow(IN.shadowWorldPos.xyz, shadowNormal)
                     : 1.0f;
     lighting *= sunShadow;
     spec     *= sunShadow;
+    sss      *= lerp(1.0f, sunShadow, TESR_SkinSSSData.w);
 #endif
 
     float4 baseColor = getBaseColor(IN.BaseUV, FaceGenMap0, FaceGenMap1, BaseMap);
@@ -95,7 +101,7 @@ VS_OUTPUT main(VS_INPUT IN) {
     // Vanilla: max(0, sun*NdotL + sun*0.5*sat(dot(E,-L))*(1-NdotV)^2 + Ambient) * albedo
     // The middle term is backscatter; GetLighting's fresnel covers it.
     // Specular sits outside the albedo multiply. SKIN_SPECULAR_STRENGTH defaults to 0.
-    float3 finalColor = max(lighting + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f), 0) * baseColor.rgb + spec;
+    float3 finalColor = max(lighting + sss + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f), 0) * baseColor.rgb + spec;
 
     color.rgb = ApplyFog(finalColor, IN.color_1, Toggles);
     color.a = baseColor.a * AmbientColor.a;

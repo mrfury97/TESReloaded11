@@ -8,6 +8,7 @@ public:
 	struct SkinStruct {
 		D3DXVECTOR4		SkinData;
 		D3DXVECTOR4		SkinColor;
+		D3DXVECTOR4		SkinSSSData; // x: TranslucencyWidth, y: TranslucencyPower, z: TranslucencyScale, w: TranslucencyShadowInfluence
 	};
 	SkinStruct Constants;
 

@@ -3,6 +3,7 @@
 void SkinShaders::RegisterConstants() {
 	TheShaderManager->RegisterConstant("TESR_SkinData", &Constants.SkinData);
 	TheShaderManager->RegisterConstant("TESR_SkinColor", &Constants.SkinColor);
+	TheShaderManager->RegisterConstant("TESR_SkinSSSData", &Constants.SkinSSSData);
 }
 
 void SkinShaders::UpdateConstants() {}
@@ -16,4 +17,9 @@ void SkinShaders::UpdateSettings() {
 	Constants.SkinColor.x = TheSettingManager->GetSettingF("Shaders.Skin.Main", "CoeffRed");
 	Constants.SkinColor.y = TheSettingManager->GetSettingF("Shaders.Skin.Main", "CoeffGreen");
 	Constants.SkinColor.z = TheSettingManager->GetSettingF("Shaders.Skin.Main", "CoeffBlue");
+
+	Constants.SkinSSSData.x = TheSettingManager->GetSettingF("Shaders.Skin.Main", "TranslucencyWidth");
+	Constants.SkinSSSData.y = TheSettingManager->GetSettingF("Shaders.Skin.Main", "TranslucencyPower");
+	Constants.SkinSSSData.z = TheSettingManager->GetSettingF("Shaders.Skin.Main", "TranslucencyScale");
+	Constants.SkinSSSData.w = TheSettingManager->GetSettingF("Shaders.Skin.Main", "TranslucencyShadowInfluence");
 }

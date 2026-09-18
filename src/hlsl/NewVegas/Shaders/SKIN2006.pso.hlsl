@@ -13,6 +13,7 @@ float4 PSLightColor[10];
 float4 TESR_ReciprocalResolution;
 float4 TESR_SkinData;
 float4 TESR_SkinColor;
+float4 TESR_SkinSSSData;
 float4 TESR_DebugVar;
 
 

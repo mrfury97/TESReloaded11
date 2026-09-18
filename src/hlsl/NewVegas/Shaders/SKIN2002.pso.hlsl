@@ -15,6 +15,7 @@ float4 Toggles : register(c27);
 float4 TESR_ReciprocalResolution;
 float4 TESR_SkinData;
 float4 TESR_SkinColor;
+float4 TESR_SkinSSSData;
 float4 TESR_DebugVar;
 
 
@@ -77,23 +78,28 @@ VS_OUTPUT main(VS_INPUT IN) {
     float3 pointLightLighting = getPointLight(pointLightDirection, eyeDirection, PBRLight(PSLightColor[2]).rgb, glowTexture, normal, atten1, atten2);
 
     // calculate lighting components
-    float3 lighting = GetLighting(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
-    float spec = GetSpecular(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
+    float3 sunLightColor = PBRLight(PSLightColor[1]).rgb;
+    float3 lighting = GetLighting(lightDirection, eyeDirection, normal, sunLightColor);
+    float spec = GetSpecular(lightDirection, eyeDirection, normal, sunLightColor);
+    float3 sss = GetSkinTranslucency(lightDirection, normal, sunLightColor);
 
     // Outside the guard: the skylight needs this normal whether or not forward shadows
     // are compiled in, and ForwardShadows is a live setting that can switch them off.
     float3 shadowNormal = GetShadowGeometricNormal(IN.shadowWorldPos.xyz);
 #if FORWARD_SHADOWS
     // Forward sun shadow. Scales the SUN terms only; the point light and ambient are untouched.
+    // sss is only partially gated -- TranslucencyShadowInfluence lets the terminator-band glow
+    // stay visible even where the shadow map's grazing-angle self-shadow bias kicks in early.
     // ddx/ddy must stay at top level, outside dynamic flow control.
     float sunShadow = SHADOW_VS_PRESENT(IN.shadowWorldPos.w)
                     ? GetSunShadow(IN.shadowWorldPos.xyz, shadowNormal)
                     : 1.0f;
     lighting *= sunShadow;
     spec     *= sunShadow;
+    sss      *= lerp(1.0f, sunShadow, TESR_SkinSSSData.w);
 #endif
 
-    lighting += spec + pointLightLighting + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f);
+    lighting += spec + sss + pointLightLighting + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f);
     float4 finalColor = float4(lighting * baseColor.rgb, baseColor.a * AmbientColor.a);
     finalColor.rgb = ApplyFog(finalColor.rgb, IN.color_1, Toggles);
 
