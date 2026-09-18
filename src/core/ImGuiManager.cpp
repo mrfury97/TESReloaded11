@@ -1124,6 +1124,9 @@ static bool ShouldHideKey(const char* key) {
 	if (strncmp(key, "TextColor", 9) == 0 || strncmp(key, "TextShadow", 10) == 0) return true;
 	// LUT filenames are rendered as cycle pickers, not raw InputText
 	if (strcmp(key, "DayLUT") == 0 || strcmp(key, "NightLUT") == 0 || strcmp(key, "InteriorLUT") == 0) return true;
+	// RimScalar only feeds Includes/Skin.hlsl's Skin(), which nothing currently calls -- dead
+	// control, hidden rather than left as a live-looking slider that does nothing.
+	if (strcmp(key, "RimScalar") == 0) return true;
 	return false;
 }
 
