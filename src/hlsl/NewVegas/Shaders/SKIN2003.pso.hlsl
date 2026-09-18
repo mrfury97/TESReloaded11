@@ -87,9 +87,9 @@ VS_OUTPUT main(VS_INPUT IN) {
 
     // calculate lighting components
     float3 diffuse = GetDiffuse(lightDirection, normal, PBRLight(PSLightColor[1]).rgb);
-    float3 rim = GetRimLight(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
+    float3 rim = GetRimLight(lightDirection, normal, PBRLight(PSLightColor[1]).rgb);
     float spec = GetSpecular(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
-    float3 sss = GetSubsurfaceScattering(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
+    float3 sss = GetSubsurfaceScattering(lightDirection, normal, PBRLight(PSLightColor[1]).rgb);
 
     float3 lighting = diffuse + rim + spec + sss + pointLightLighting + PBRAmbient(AmbientColor.rgb);
     float4 finalColor = float4(lighting * baseColor.rgb, baseColor.a * AmbientColor.a);

@@ -79,9 +79,9 @@ VS_OUTPUT main(VS_INPUT IN) {
 
     // calculate lighting components
     float3 diffuse = GetDiffuse(lightDirection, normal, PBRLight(PSLightColor[1]).rgb);
-    float3 rim = GetRimLight(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
+    float3 rim = GetRimLight(lightDirection, normal, PBRLight(PSLightColor[1]).rgb);
     float spec = GetSpecular(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
-    float3 sss = GetSubsurfaceScattering(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
+    float3 sss = GetSubsurfaceScattering(lightDirection, normal, PBRLight(PSLightColor[1]).rgb);
 
     // Outside the guard: the skylight needs this normal whether or not forward shadows
     // are compiled in, and ForwardShadows is a live setting that can switch them off.

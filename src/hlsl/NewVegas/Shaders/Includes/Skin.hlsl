@@ -58,35 +58,39 @@ float3 GetDiffuse(float3 lightDirection, float3 normal, float3 lightColor){
     return max(diffuse * lightColor, 0);
 }
 
-// Rim light effect: fresnel term that shows when light is behind, scaled by RimScalar
-// (TESR_SkinData.w). Deliberately NOT multiplied by a sun shadow term by callers: it represents
-// light grazing/scattering around the silhouette rather than direct N.L reflection, and the
-// surface point it lights up is almost always the same one a shadow map marks self-shadowed
-// (the head occluding the ear from the sun). Gating it by that shadow term was a bug -- it
-// silenced the rim glow in exactly the backlit condition it exists to show.
-float3 GetRimLight(float3 lightDirection, float3 eyeDirection, float3 normal, float3 lightColor){
-    float fresnel = sqr(1 - shades(normal, eyeDirection)) * shades(lightDirection, -eyeDirection) * TESR_SkinData.w;
-    return max(fresnel * lightColor, 0);
+// Rim light effect: glows the side of the surface facing away from the light, scaled by
+// RimScalar (TESR_SkinData.w). Deliberately takes NO eyeDirection: it depends only on the
+// surface's normal vs. the light, so it reads the same regardless of which way the camera is
+// looking, instead of only appearing when the camera itself happens to face the sun.
+// Also NOT multiplied by a sun shadow term by callers: it represents light grazing/scattering
+// around the silhouette rather than direct N.L reflection, and the surface point it lights up is
+// almost always the same one a shadow map marks self-shadowed (the head occluding the ear from
+// the sun). Gating it by that shadow term was a bug -- it silenced the rim glow in exactly the
+// backlit condition it exists to show.
+float3 GetRimLight(float3 lightDirection, float3 normal, float3 lightColor){
+    float backlight = saturate(-dot(normal, lightDirection)) * TESR_SkinData.w;
+    return max(backlight * lightColor, 0);
 }
 
 float GetSpecular(float3 lightDirection, float3 eyeDirection, float3 normal, float3 lightColor){
     return  pow(shades(normal, normalize(lightDirection + eyeDirection)), TESR_SkinData.y) * luma(lightColor) * SKIN_SPECULAR_STRENGTH;
 }
 
-// Translucency effect: fast screen-space subsurface scattering (Barre-Brisebois & Bouchard,
-// "Approximating Translucency for a Fast, Cheap and Convincing Subsurface Scattering Look",
-// GDC 2011). There is no thickness map, so TranslucencyDistortion bends the light vector into the
-// surface; when the eye ends up roughly facing the light back through the surface (ears, nose,
-// fingers, a cheek backlit by the sun) light "leaks" through and picks up the skin's warm
-// subsurface tint instead of just going dark. TranslucencyPower/TranslucencyScale (TESR_SkinSSSData)
-// shape the glow's falloff and brightness; Attenuation/MaterialThickness (TESR_SkinData) scale its
+// Translucency effect: fake subsurface scattering, adapted from the classic fast-SSS "backlight"
+// look (Barre-Brisebois & Bouchard, GDC 2011) but made view-independent by design: it takes NO
+// eyeDirection, only normal vs. light, so the warm glow on ears/nose/fingers/cheek shows up from
+// ANY camera angle once that patch of surface faces away from the sun -- not only when the
+// camera itself happens to face the sun too. There is no thickness map, so TranslucencyDistortion
+// (TESR_SkinSSSData.x) offsets how far onto the LIT side the glow starts bleeding in before the
+// true terminator (0 = starts exactly at the terminator). TranslucencyPower/TranslucencyScale
+// shape the falloff and brightness; Attenuation/MaterialThickness (TESR_SkinData) scale its
 // overall strength and tinted by TESR_SkinColor -- all from Shaders.Skin.Main in the settings TOML.
-// Deliberately NOT multiplied by a sun shadow term by callers, same reasoning as GetRimLight:
-// this is light scattering through the surface, most visible exactly where a shadow map would
-// call the point self-shadowed.
-float3 GetSubsurfaceScattering(float3 lightDirection, float3 eyeDirection, float3 normal, float3 lightColor) {
-    float3 scatterDir = lightDirection + normal * TESR_SkinSSSData.x; // TranslucencyDistortion
-    float transmittance = pow(saturate(dot(eyeDirection, -scatterDir)), TESR_SkinSSSData.y) * TESR_SkinSSSData.z; // TranslucencyPower, TranslucencyScale
+// Also NOT multiplied by a sun shadow term by callers, same reasoning as GetRimLight: this is
+// light scattering through the surface, most visible exactly where a shadow map would call the
+// point self-shadowed.
+float3 GetSubsurfaceScattering(float3 lightDirection, float3 normal, float3 lightColor) {
+    float ndotl = dot(normal, lightDirection);
+    float transmittance = pow(saturate(TESR_SkinSSSData.x - ndotl), TESR_SkinSSSData.y) * TESR_SkinSSSData.z; // Distortion, Power, Scale
     transmittance *= TESR_SkinData.x * TESR_SkinData.z; // Attenuation * MaterialThickness
 
     return transmittance * TESR_SkinColor.rgb * lightColor;

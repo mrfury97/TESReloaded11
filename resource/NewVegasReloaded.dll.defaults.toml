@@ -762,7 +762,7 @@ CoeffRed = 0.36                     # Subsurface tint, red (skin scatters red/or
 MaterialThickness = 0.12            # Translucency effect: how thick the skin looks for light transmission (ears, nose, fingers)
 RimScalar = 0.5                     # Rim light effect: strength of the backlit fresnel glow around silhouette edges
 SpecularPower = 0.78
-TranslucencyDistortion = 0.4        # Translucency effect: how far the transmitted light bends around the surface normal
+TranslucencyDistortion = 0.4        # Translucency effect: how far onto the lit side the glow bleeds before the terminator
 TranslucencyPower = 4.0             # Translucency effect: falloff sharpness of the backlight glow (higher = tighter, more focused)
 TranslucencyScale = 3.0             # Translucency effect: brightness multiplier of the backlight glow
 WrapDiffuse = 0.0                   # Wrap diffuse effect: softens the light falloff at the terminator, like light scattering under the skin (0 = off)
