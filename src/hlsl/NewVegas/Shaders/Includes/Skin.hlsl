@@ -48,50 +48,22 @@ float3 Skin(float3 SkinColor, float3 LightColor, float3 CameraDir, float3 LightD
 };
 
 
-// Direct diffuse. Wrap diffuse effect: softens the N.L falloff around the terminator to fake
-// light scattering under the skin. WrapDiffuse (TESR_SkinSSSData.w) of 0 reproduces the original
-// shades(normal, lightDirection) exactly; raising it pushes the falloff past 90 degrees.
-// This is real N.L reflected light, so callers should still multiply it by any sun shadow term.
-float3 GetDiffuse(float3 lightDirection, float3 normal, float3 lightColor){
-    float wrap = TESR_SkinSSSData.w;
-    float diffuse = saturate((dot(normal, lightDirection) + wrap) / (1 + wrap));
-    return max(diffuse * lightColor, 0);
-}
+float3 GetLighting(float3 lightDirection, float3 eyeDirection, float3 normal, float3 lightColor){
+    float fresnel = sqr(1 - shades(normal, eyeDirection)) * shades(lightDirection, -eyeDirection) * 0.5; // vanilla fresnel that shows when light is behind
 
-// Rim light effect: glows the side of the surface facing away from the light, scaled by
-// RimScalar (TESR_SkinData.w). Deliberately takes NO eyeDirection: it depends only on the
-// surface's normal vs. the light, so it reads the same regardless of which way the camera is
-// looking, instead of only appearing when the camera itself happens to face the sun.
-// Also NOT multiplied by a sun shadow term by callers: it represents light grazing/scattering
-// around the silhouette rather than direct N.L reflection, and the surface point it lights up is
-// almost always the same one a shadow map marks self-shadowed (the head occluding the ear from
-// the sun). Gating it by that shadow term was a bug -- it silenced the rim glow in exactly the
-// backlit condition it exists to show.
-float3 GetRimLight(float3 lightDirection, float3 normal, float3 lightColor){
-    float backlight = saturate(-dot(normal, lightDirection)) * TESR_SkinData.w;
-    return max(backlight * lightColor, 0);
+    // float fresnelCoeff = pows(1 - shades(normal, eyeDir), 5);
+    float diffuse = shades(normal, lightDirection);
+    // float3 fresnel = fresnelCoeff * lightColor * 0.5 * pow(diffuse, TESR_DebugVar.w);
+    float3 lighting = diffuse * lightColor + fresnel * lightColor;
+    return max(lighting, 0);
 }
 
 float GetSpecular(float3 lightDirection, float3 eyeDirection, float3 normal, float3 lightColor){
     return  pow(shades(normal, normalize(lightDirection + eyeDirection)), TESR_SkinData.y) * luma(lightColor) * SKIN_SPECULAR_STRENGTH;
 }
 
-// Translucency effect: warm subsurface glow that shows up on skin actually facing the sun
-// (direct sunlight), rather than the backlit/shadow-side transmission look. View-independent by
-// design: it takes NO eyeDirection, only normal vs. light, so it reads the same from any camera
-// angle. TranslucencyDistortion (TESR_SkinSSSData.x) is the N.L threshold the surface must clear
-// before the glow starts (0 = starts at the terminator, 1 = only dead-on sunlight triggers it).
-// TranslucencyPower/TranslucencyScale shape the falloff and brightness; Attenuation/
-// MaterialThickness (TESR_SkinData) scale its overall strength and tinted by TESR_SkinColor --
-// all from Shaders.Skin.Main in the settings TOML. Since this now requires actual direct
-// sunlight, callers SHOULD multiply it by any sun shadow term (unlike GetRimLight): an object
-// blocking the sun means there is no direct sunlight to glow from, real occlusion or not.
-float3 GetSubsurfaceScattering(float3 lightDirection, float3 normal, float3 lightColor) {
-    float ndotl = dot(normal, lightDirection);
-    float transmittance = pow(saturate(ndotl - TESR_SkinSSSData.x), TESR_SkinSSSData.y) * TESR_SkinSSSData.z; // Threshold, Power, Scale
-    transmittance *= TESR_SkinData.x * TESR_SkinData.z; // Attenuation * MaterialThickness
-
-    return transmittance * TESR_SkinColor.rgb * lightColor;
+float GetSSS(float3 lightDirection, float3 normal){
+    return (1 - shades(normal, lightDirection)) * 0.5;//TESR_DebugVar.x;
 }
 
 float3 getNormal(float2 uv){

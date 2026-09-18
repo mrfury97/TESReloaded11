@@ -755,20 +755,16 @@ Strength = 0.75
 Enabled = false                     # Edge contrast shader to increase detail sharpness.
 
 [_Shaders.Skin.Main]
-Attenuation = 0.84                  # Translucency effect: overall strength of the direct-sunlight glow term
-CoeffBlue = 0.12                    # Subsurface tint, blue
-CoeffGreen = 0.22                   # Subsurface tint, green
-CoeffRed = 0.36                     # Subsurface tint, red (skin scatters red/orange wavelengths the most)
-MaterialThickness = 0.12            # Translucency effect: how thick the skin looks for light transmission (ears, nose, fingers)
-RimScalar = 0.5                     # Rim light effect: strength of the backlit fresnel glow around silhouette edges
+Attenuation = 0.84
+CoeffBlue = 0.12
+CoeffGreen = 0.22
+CoeffRed = 0.36
+MaterialThickness = 0.12
+RimScalar = 0.5
 SpecularPower = 0.78
-TranslucencyDistortion = 0.4        # Translucency effect: how directly lit the skin must be before the glow starts (0 = starts at the terminator, 1 = only dead-on sunlight)
-TranslucencyPower = 4.0             # Translucency effect: falloff sharpness of the sunlit glow (higher = tighter, more focused)
-TranslucencyScale = 3.0             # Translucency effect: brightness multiplier of the sunlit glow
-WrapDiffuse = 0.0                   # Wrap diffuse effect: softens the light falloff at the terminator, like light scattering under the skin (0 = off)
 
 [_Shaders.Skin.Status]
-Enabled = true                      # Replaces the skin shader (needed for the SSS lighting above to run).
+Enabled = false                     # Not currently used. Replaces the skin shader.
 
 
 [_Shaders.Sky.Main]
