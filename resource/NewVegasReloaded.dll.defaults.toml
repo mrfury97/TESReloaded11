@@ -755,12 +755,12 @@ Strength = 0.75
 Enabled = false                     # Edge contrast shader to increase detail sharpness.
 
 [_Shaders.Skin.Main]
-Attenuation = 0.84
-CoeffBlue = 0.12
-CoeffGreen = 0.22
-CoeffRed = 0.36
-MaterialThickness = 0.12
-RimScalar = 0.5
+Attenuation = 0.84                  # Overall strength of the subsurface scattering transmittance term
+CoeffBlue = 0.12                    # Subsurface tint, blue
+CoeffGreen = 0.22                   # Subsurface tint, green
+CoeffRed = 0.36                     # Subsurface tint, red (skin scatters red/orange wavelengths the most)
+MaterialThickness = 0.12            # How thick the skin looks for light transmission (ears, nose, fingers)
+RimScalar = 0.5                     # Rim light strength (not currently used by the SSS term)
 SpecularPower = 0.78
 
 [_Shaders.Skin.Status]

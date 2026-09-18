@@ -87,8 +87,9 @@ VS_OUTPUT main(VS_INPUT IN) {
     // calculate lighting components
     float3 lighting = GetLighting(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
     float spec = GetSpecular(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
+    float3 sss = GetSubsurfaceScattering(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
 
-    lighting += spec + pointLightLighting + PBRAmbient(AmbientColor.rgb);
+    lighting += spec + sss + pointLightLighting + PBRAmbient(AmbientColor.rgb);
     float4 finalColor = float4(lighting * baseColor.rgb, baseColor.a * AmbientColor.a);
     finalColor.rgb = ApplyFog(finalColor.rgb, IN.color_1, Toggles);
 

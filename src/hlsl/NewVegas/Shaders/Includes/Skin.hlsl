@@ -62,8 +62,24 @@ float GetSpecular(float3 lightDirection, float3 eyeDirection, float3 normal, flo
     return  pow(shades(normal, normalize(lightDirection + eyeDirection)), TESR_SkinData.y) * luma(lightColor) * SKIN_SPECULAR_STRENGTH;
 }
 
-float GetSSS(float3 lightDirection, float3 normal){
-    return (1 - shades(normal, lightDirection)) * 0.5;//TESR_DebugVar.x;
+// Fast screen-space subsurface scattering translucency term (Barre-Brisebois & Bouchard,
+// "Approximating Translucency for a Fast, Cheap and Convincing Subsurface Scattering Look",
+// GDC 2011). There is no thickness map, so a fixed distortion bends the light vector into the
+// surface; when the eye ends up roughly facing the light back through the surface (ears, nose,
+// fingers, a cheek backlit by the sun) light "leaks" through and picks up the skin's warm
+// subsurface tint instead of just going dark. Scaled by TESR_SkinData's Attenuation and
+// MaterialThickness and tinted by TESR_SkinColor (Shaders.Skin.Main in the settings TOML), so it
+// shares tuning knobs with the rest of the skin shader rather than adding new constants.
+float3 GetSubsurfaceScattering(float3 lightDirection, float3 eyeDirection, float3 normal, float3 lightColor) {
+    const float distortion = 0.4f;
+    const float power = 4.0f;
+    const float scale = 3.0f;
+
+    float3 scatterDir = lightDirection + normal * distortion;
+    float transmittance = pow(saturate(dot(eyeDirection, -scatterDir)), power) * scale;
+    transmittance *= TESR_SkinData.x * TESR_SkinData.z; // Attenuation * MaterialThickness
+
+    return transmittance * TESR_SkinColor.rgb * lightColor;
 }
 
 float3 getNormal(float2 uv){

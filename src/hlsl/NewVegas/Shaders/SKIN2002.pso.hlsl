@@ -79,6 +79,7 @@ VS_OUTPUT main(VS_INPUT IN) {
     // calculate lighting components
     float3 lighting = GetLighting(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
     float spec = GetSpecular(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
+    float3 sss = GetSubsurfaceScattering(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
 
     // Outside the guard: the skylight needs this normal whether or not forward shadows
     // are compiled in, and ForwardShadows is a live setting that can switch them off.
@@ -91,9 +92,10 @@ VS_OUTPUT main(VS_INPUT IN) {
                     : 1.0f;
     lighting *= sunShadow;
     spec     *= sunShadow;
+    sss      *= sunShadow; // transmitted light shouldn't punch through a shadowed sun
 #endif
 
-    lighting += spec + pointLightLighting + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f);
+    lighting += spec + sss + pointLightLighting + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f);
     float4 finalColor = float4(lighting * baseColor.rgb, baseColor.a * AmbientColor.a);
     finalColor.rgb = ApplyFog(finalColor.rgb, IN.color_1, Toggles);
 
