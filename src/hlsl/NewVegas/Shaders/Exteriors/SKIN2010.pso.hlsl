@@ -52,7 +52,7 @@ static const float4 const_9 = float4(0.3, 0, 0, 1);
 
 // Structures:
 
-#include "Includes/PBRScale.hlsl"
+#include "../Includes/PBRScale.hlsl"
 
 struct VS_INPUT {
     float3 texcoord_3 : TEXCOORD3;

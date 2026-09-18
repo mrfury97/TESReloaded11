@@ -29,12 +29,12 @@ float4 TESR_DebugVar;
 //   AttenuationMap texture_4       1
 //
 
-#include "Includes/helpers.hlsl"
-#include "Includes/Shadow.hlsl"
+#include "../Includes/helpers.hlsl"
+#include "../Includes/Shadow.hlsl"
 
 // Structures:
 
-#include "Includes/PBRScale.hlsl"
+#include "../Includes/PBRScale.hlsl"
 
 struct VS_INPUT {
     float2 BaseUV : TEXCOORD0;
@@ -53,7 +53,7 @@ struct VS_OUTPUT {
 };
 
 // Code:
-#include "Includes/Skin.hlsl"
+#include "../Includes/Skin.hlsl"
 
 VS_OUTPUT main(VS_INPUT IN) {
     VS_OUTPUT OUT;

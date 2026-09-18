@@ -1,4 +1,4 @@
-// Skin Shader for when only the sun light is used
+// Skin with vanilla sun shadow
 //
 // Parameters:
 
@@ -8,7 +8,9 @@ sampler2D FaceGenMap0 : register(s2);
 sampler2D FaceGenMap1 : register(s3);
 sampler2D NormalMap : register(s1);
 float4 PSLightColor[10] : register(c3);
-float4 Toggles : register(c27); // x:bUseVertexColors, y:fUnknown_FogRelated, z:fSpecularity, w:fAlphaTestRef
+sampler2D ShadowMap : register(s6);
+sampler2D ShadowMaskMap : register(s7);
+float4 Toggles : register(c27);
 
 float4 TESR_ReciprocalResolution;
 float4 TESR_SkinData;
@@ -17,46 +19,52 @@ float4 TESR_SkinSSSData;
 float4 TESR_DebugVar;
 
 
-#include "Includes/Helpers.hlsl"
-
 // Registers:
 //
-//   Name         Reg   Size
-//   ------------ ----- ----
-//   AmbientColor const_1       1
-//   PSLightColor[0] const_3       1
-//   Toggles      const_27      1
-//   BaseMap      texture_0       1
-//   NormalMap    texture_1       1
-//   FaceGenMap0  texture_2       1
-//   FaceGenMap1  texture_3       1
+//   Name          Reg   Size
+//   ------------- ----- ----
+//   AmbientColor  const_1       1
+//   PSLightColor[0]  const_3       1
+//   Toggles       const_27      1
+//   BaseMap       texture_0       1
+//   NormalMap     texture_1       1
+//   FaceGenMap0   texture_2       1
+//   FaceGenMap1   texture_3       1
+//   ShadowMap     texture_6       1
+//   ShadowMaskMap texture_7       1
 //
 
+#include "../Includes/helpers.hlsl"
 
 // Structures:
 
-#include "Includes/PBRScale.hlsl"
+#include "../Includes/PBRScale.hlsl"
 
 struct VS_INPUT {
     float2 BaseUV : TEXCOORD0;
-    float4 shadowWorldPos : TEXCOORD4;   // from ObjectTemplate VS			            // UV
-    float3 texcoord_1 : TEXCOORD1;			// light data in tangent space
-    float3 texcoord_6 : TEXCOORD6;			// eye data in tangent space
-    float3 position : SV_POSITION;			// light data in tangent space
-    float3 color_0 : COLOR0;                // vertex color?
-    float4 color_1 : COLOR1;                // fog contribution?
+    float4 shadowWorldPos : TEXCOORD4;   // from ObjectTemplate VS			
+    float3 texcoord_6 : TEXCOORD6_centroid;			
+    float4 texcoord_7 : TEXCOORD7;			
+    float3 color_0 : COLOR0;
+    float4 color_1 : COLOR1;
+    float3 texcoord_1 : TEXCOORD1_centroid;			
 };
 
 struct VS_OUTPUT {
     float4 color_0 : COLOR0;
 };
 
-#include "Includes/Shadow.hlsl"
-#include "Includes/Skin.hlsl"
-
+// Code:
+#include "../Includes/Shadow.hlsl"
+#include "../Includes/Skin.hlsl"
 
 VS_OUTPUT main(VS_INPUT IN) {
     VS_OUTPUT OUT;
+
+   // unused in NVR
+    // float shadow = tex2D(ShadowMaskMap, IN.texcoord_7.zw);			
+    // float4 r3 = tex2D(ShadowMap, IN.texcoord_7.xy);			
+    //clip(r1.xyzw);
 
 
     float3 lightDirection = normalize(IN.texcoord_1);
@@ -100,6 +108,8 @@ VS_OUTPUT main(VS_INPUT IN) {
 
     OUT.color_0 = color;
     return OUT;
+
+    return OUT;
 };
 
-// approximately 42 instruction slots used (4 texture, 38 arithmetic)
+// approximately 48 instruction slots used (6 texture, 42 arithmetic)
