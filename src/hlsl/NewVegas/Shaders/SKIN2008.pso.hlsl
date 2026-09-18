@@ -26,7 +26,7 @@ static const float4 const_2 = float4(0.3, 0, 0, 0);
 
 // Structures:
 
-#include "../Includes/PBRScale.hlsl"
+#include "Includes/PBRScale.hlsl"
 
 struct VS_INPUT {
     float3 texcoord_1 : TEXCOORD1_centroid;			// partial precision

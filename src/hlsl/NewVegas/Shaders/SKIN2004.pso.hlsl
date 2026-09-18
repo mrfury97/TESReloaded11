@@ -8,10 +8,6 @@ sampler2D BaseMap : register(s0);
 sampler2D GlowMap : register(s3);
 sampler2D NormalMap : register(s1);
 float4 PSLightColor[10] : register(c3);
-sampler2D ShadowMap : register(s5);
-sampler2D ShadowMaskMap : register(s6);
-
-
 // Registers:
 //
 //   Name           Reg   Size
@@ -22,8 +18,6 @@ sampler2D ShadowMaskMap : register(s6);
 //   NormalMap      texture_1       1
 //   GlowMap        texture_3       1
 //   AttenuationMap texture_4       1
-//   ShadowMap      texture_5       1
-//   ShadowMaskMap  texture_6       1
 //
 
 
@@ -38,7 +32,7 @@ sampler2D ShadowMaskMap : register(s6);
 
 // Structures:
 
-#include "../Includes/PBRScale.hlsl"
+#include "Includes/PBRScale.hlsl"
 
 float4 TESR_SkinData;
 float4 TESR_SkinColor;
@@ -59,11 +53,10 @@ float3 SkinTranslucency(float3 lightDirection, float3 normal, float3 lightColor)
 }
 
 struct VS_INPUT {
-    float2 BaseUV : TEXCOORD0;			// partial precision
-    float3 texcoord_7 : TEXCOORD7_centroid;			// partial precision
-    float4 texcoord_6 : TEXCOORD6;			// partial precision
     float3 texcoord_1 : TEXCOORD1_centroid;			// partial precision
     float3 texcoord_2 : TEXCOORD2_centroid;			// partial precision
+    float2 BaseUV : TEXCOORD0;			// partial precision
+    float3 texcoord_7 : TEXCOORD7_centroid;			// partial precision
     float4 texcoord_4 : TEXCOORD4;			// partial precision
 };
 
@@ -83,57 +76,53 @@ VS_OUTPUT main(VS_INPUT IN) {
 #define	weight(v)		dot(v, 1)
 #define	sqr(v)			((v) * (v))
 
-    float1 att14;
-    float1 att2;
-    float3 noxel3;
-    float3 q10;
-    float1 q12;
-    float3 q17;
-    float3 q4;
+    float1 att11;
+    float1 att12;
+    float3 noxel1;
+    float1 q10;
+    float3 q14;
+    float3 q2;
+    float1 q4;
+    float1 q5;
     float1 q6;
     float1 q7;
-    float1 q8;
-    float1 q9;
-    float3 q91;
+    float3 q76;
+    float3 q8;
     float3 r0;
     float4 r1;
     float3 r2;
-    float3 r6;
-    float3 t1;
-    float1 t13;
+    float3 r4;
     float4 texel0;
 
-    t1.xyz = tex2D(ShadowMap, IN.texcoord_6.xy);			// partial precision
-    t13.x = tex2D(ShadowMaskMap, IN.texcoord_6.zw);			// partial precision
-    noxel3.xyz = tex2D(NormalMap, IN.BaseUV.xy);			// partial precision
+    noxel1.xyz = tex2D(NormalMap, IN.BaseUV.xy);			// partial precision
     r1.xyzw = tex2D(GlowMap, IN.BaseUV.xy);			// partial precision
     texel0.xyzw = tex2D(BaseMap, IN.BaseUV.xy);			// partial precision
     OUT.color_0.rgba = texel0.xyzw;			// partial precision
-    att2.x = tex2D(AttenuationMap, IN.texcoord_4.xy);			// partial precision
-    att14.x = tex2D(AttenuationMap, IN.texcoord_4.zw);			// partial precision
-    q4.xyz = normalize(expand(noxel3.xyz));			// partial precision
-    q10.xyz = normalize(IN.texcoord_7.xyz);			// partial precision
-    q12.x = sqr(1 - shades(q4.xyz, q10.xyz));			// partial precision
-    q6.x = dot(q4.xyz, normalize(IN.texcoord_2.xyz));
-    q7.x = saturate(q6.x);			// partial precision
-    q8.x = saturate((q6.x + 0.3) * 0.769230783);
-    q9.x = saturate(((3 - (q8.x * 2)) * sqr(q8.x)) - ((3 - (q7.x * 2)) * sqr(q7.x)));			// partial precision
-    q91.xyz = (q12.x * shades(q10.xyz, -normalize(IN.texcoord_2.xyz))) * lerp(const_4.xyz, r1.xyz, 0.5);			// partial precision
-    r0.xyz = (q9.x * r1.xyz) + ((q7.x * const_4.xyz) + q91.xyz);			// partial precision
-    r2.xyz = ((q12.x * shades(q10.xyz, -IN.texcoord_1)) * const_3.xyz) * 0.5;			// partial precision
-    r2.xyz = (shades(q4.xyz, IN.texcoord_1.xyz) * const_3.xyz) + r2.xyz;			// partial precision
-    q17.xyz = (((t13.x * (t1.xyz - 1)) + 1) * r2.xyz) + (r0.xyz * saturate((1 - att2.x) - att14.x));			// partial precision
+    att12.x = tex2D(AttenuationMap, IN.texcoord_4.zw);			// partial precision
+    att11.x = tex2D(AttenuationMap, IN.texcoord_4.xy);			// partial precision
+    q2.xyz = normalize(expand(noxel1.xyz));			// partial precision
+    q8.xyz = normalize(IN.texcoord_7.xyz);			// partial precision
+    q10.x = sqr(1 - shades(q2.xyz, q8.xyz));			// partial precision
+    q4.x = dot(q2.xyz, normalize(IN.texcoord_2.xyz));
+    q5.x = saturate(q4.x);			// partial precision
+    q6.x = saturate((q4.x + 0.3) * 0.769230783);
+    q7.x = saturate(((3 - (q6.x * 2)) * sqr(q6.x)) - ((3 - (q5.x * 2)) * sqr(q5.x)));			// partial precision
+    q76.xyz = (q10.x * shades(q8.xyz, -normalize(IN.texcoord_2.xyz))) * lerp(const_4.xyz, r1.xyz, 0.5);			// partial precision
+    r0.xyz = (q7.x * r1.xyz) + ((q5.x * const_4.xyz) + q76.xyz);			// partial precision
+    r2.xyz = ((q10.x * shades(q8.xyz, -IN.texcoord_1)) * const_3.xyz) * 0.5;			// partial precision
+    q14.xyz = (saturate((1 - att11.x) - att12.x) * r0.xyz) + ((shades(q2.xyz, IN.texcoord_1.xyz) * const_3.xyz) + r2.xyz);			// partial precision
 
     // Interior skin translucency, driven by this technique's point light, scaled by its own
     // distance attenuation -- no sun shadow involved.
-    float3 sss = SkinTranslucency(normalize(IN.texcoord_2.xyz), q4.xyz, const_4.xyz) * saturate((1 - att2.x) - att14.x);
+    float3 sss = SkinTranslucency(normalize(IN.texcoord_2.xyz), q2.xyz, const_4.xyz) * saturate((1 - att11.x) - att12.x);
 
-    // Vanilla ends: texld_pp r6, t0, s0 / add_pp r6.xyz, r0, c1 / mov_pp oC0, r6 -- one
+    // Vanilla ends: texld_pp r4, t0, s0 / add_pp r4.xyz, r0, c1 / mov_pp oC0, r4 -- one
     // register carries the base texture's alpha and then has .xyz overwritten by the lighting
-    // sum, so .a comes from texel0 above. This pass applies no albedo.
-    OUT.color_0.rgb = q17.xyz + sss + PBRAmbient(AmbientColor.rgb);			// partial precision
+    // sum, so .a comes from texel0 above. The lighting sum is the output; this pass applies
+    // no albedo.
+    OUT.color_0.rgb = q14.xyz + sss + PBRAmbient(AmbientColor.rgb);			// partial precision
 
     return OUT;
 };
 
-// approximately 56 instruction slots used (7 texture, 49 arithmetic)
+// approximately 49 instruction slots used (5 texture, 44 arithmetic)
