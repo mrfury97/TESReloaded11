@@ -86,14 +86,10 @@ VS_OUTPUT main(VS_INPUT IN) {
     // Outside the guard: the skylight needs this normal whether or not forward shadows
     // are compiled in, and ForwardShadows is a live setting that can switch them off.
     float3 shadowNormal = GetShadowGeometricNormal(IN.shadowWorldPos.xyz);
-    // Declared unconditionally (unlike sunShadow below) so it's in scope at the PBRAmbient/
-    // SkyAmbient line regardless of whether FORWARD_SHADOWS is compiled in. See GetShadowDarkness.
-    float ambientShadow = 1.0f;
 #if FORWARD_SHADOWS
-    // Forward sun shadow. Scales the SUN terms directly; the point light is untouched, and
-    // ambient-driven terms are scaled separately by ambientShadow, floored rather than fully
-    // zeroed. sss is only partially gated -- TranslucencyShadowInfluence lets the terminator-band
-    // glow stay visible even where the shadow map's grazing-angle self-shadow bias kicks in early.
+    // Forward sun shadow. Scales the SUN terms only; the point light and ambient are untouched.
+    // sss is only partially gated -- TranslucencyShadowInfluence lets the terminator-band glow
+    // stay visible even where the shadow map's grazing-angle self-shadow bias kicks in early.
     // ddx/ddy must stay at top level, outside dynamic flow control.
     float sunShadow = SHADOW_VS_PRESENT(IN.shadowWorldPos.w)
                     ? GetSunShadow(IN.shadowWorldPos.xyz, shadowNormal)
@@ -101,11 +97,9 @@ VS_OUTPUT main(VS_INPUT IN) {
     lighting *= sunShadow;
     spec     *= sunShadow;
     sss      *= lerp(1.0f, sunShadow, TESR_SkinSSSData.w);
-    ambientShadow = GetShadowDarkness(sunShadow);
 #endif
 
-    float3 ambient = (PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f)) * ambientShadow;
-    lighting += spec + sss + pointLightLighting + ambient;
+    lighting += spec + sss + pointLightLighting + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f);
     float4 finalColor = float4(lighting * baseColor.rgb, baseColor.a * AmbientColor.a);
     finalColor.rgb = ApplyFog(finalColor.rgb, IN.color_1, Toggles);
 

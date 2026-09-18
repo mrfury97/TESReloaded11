@@ -118,16 +118,12 @@ VS_OUTPUT main(VS_INPUT IN) {
     // Outside the guard: the skylight needs this normal whether or not forward shadows
     // are compiled in, and ForwardShadows is a live setting that can switch them off.
     float3 shadowNormal = GetShadowGeometricNormal(IN.shadowWorldPos.xyz);
-    // Declared unconditionally (unlike sunShadow below) so it's in scope at the PBRAmbient/
-    // SkyAmbient line regardless of whether FORWARD_SHADOWS is compiled in. See GetShadowDarkness.
-    float ambientShadow = 1.0f;
 #if FORWARD_SHADOWS
     // ddx/ddy must stay at top level, outside dynamic flow control.
     float sunShadow = SHADOW_VS_PRESENT(IN.shadowWorldPos.w)
                     ? GetSunShadow(IN.shadowWorldPos.xyz, shadowNormal)
                     : 1.0f;
     sunTerm *= sunShadow;
-    ambientShadow = GetShadowDarkness(sunShadow);
 #endif
 
     r1.yzw = (saturate((1 - att3.x) - att4.x) * q40.xyz) + sunTerm;			// partial precision
@@ -138,8 +134,7 @@ VS_OUTPUT main(VS_INPUT IN) {
     float3 sss1 = GetSkinTranslucency(normalize(IN.texcoord_2.xyz), q6.xyz, PointLight1Color.rgb) * saturate((1 - att3.x) - att4.x);
     float3 sss2 = GetSkinTranslucency(normalize(IN.texcoord_3.xyz), q6.xyz, PointLight2Color.rgb) * r2.w;
 
-    float3 ambient = (PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f)) * ambientShadow;
-    r6.xyz = ((r2.w * ((q19.x * r4.yzw) + r0.yzw)) + r1.yzw) + sss1 + sss2 + ambient;			// partial precision
+    r6.xyz = ((r2.w * ((q19.x * r4.yzw) + r0.yzw)) + r1.yzw) + sss1 + sss2 + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f);			// partial precision
 
     // Was a debug override: selectColor(TESR_DebugVar.x, ...) emitted a flat light colour
     // unless the dev var was zero. Kept only the real result.

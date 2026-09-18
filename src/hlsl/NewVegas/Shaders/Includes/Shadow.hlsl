@@ -326,17 +326,3 @@ float GetSunShadow(float3 worldPos, float3 worldNormal) {
 
     return shadow;
 }
-
-// ---------------------------------------------------------------------------
-// Floors a shadow factor at (1 - Darkness) instead of letting it reach 0, mirroring the deferred
-// composite's Shadow.r = lerp(DARKNESS, 1.0, Shadow.r) in Effects/ShadowsExteriors.fx.hlsl
-// (DARKNESS = 1 - TESR_ShadowData.y there). GetSunShadow alone only zeroes the direct SUN term;
-// ambient/sky light was left completely untouched by it, so a fully shadowed surface kept 100%
-// of its ambient/sky brightness and shadows read as dim rather than dark. Multiply the
-// ambient/sky contribution by this (in addition to, not instead of, GetSunShadow on the sun
-// term) to bring forward shadows in line with the deferred fallback's darkness setting.
-// ---------------------------------------------------------------------------
-float GetShadowDarkness(float sunShadow) {
-    float shadowFloor = saturate(1.0f - TESR_ShadowData.y); // Darkness
-    return lerp(shadowFloor, 1.0f, sunShadow);
-}
