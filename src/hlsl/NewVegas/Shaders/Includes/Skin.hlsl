@@ -76,21 +76,19 @@ float GetSpecular(float3 lightDirection, float3 eyeDirection, float3 normal, flo
     return  pow(shades(normal, normalize(lightDirection + eyeDirection)), TESR_SkinData.y) * luma(lightColor) * SKIN_SPECULAR_STRENGTH;
 }
 
-// Translucency effect: fake subsurface scattering, adapted from the classic fast-SSS "backlight"
-// look (Barre-Brisebois & Bouchard, GDC 2011) but made view-independent by design: it takes NO
-// eyeDirection, only normal vs. light, so the warm glow on ears/nose/fingers/cheek shows up from
-// ANY camera angle once that patch of surface faces away from the sun -- not only when the
-// camera itself happens to face the sun too. There is no thickness map, so TranslucencyDistortion
-// (TESR_SkinSSSData.x) offsets how far onto the LIT side the glow starts bleeding in before the
-// true terminator (0 = starts exactly at the terminator). TranslucencyPower/TranslucencyScale
-// shape the falloff and brightness; Attenuation/MaterialThickness (TESR_SkinData) scale its
-// overall strength and tinted by TESR_SkinColor -- all from Shaders.Skin.Main in the settings TOML.
-// Also NOT multiplied by a sun shadow term by callers, same reasoning as GetRimLight: this is
-// light scattering through the surface, most visible exactly where a shadow map would call the
-// point self-shadowed.
+// Translucency effect: warm subsurface glow that shows up on skin actually facing the sun
+// (direct sunlight), rather than the backlit/shadow-side transmission look. View-independent by
+// design: it takes NO eyeDirection, only normal vs. light, so it reads the same from any camera
+// angle. TranslucencyDistortion (TESR_SkinSSSData.x) is the N.L threshold the surface must clear
+// before the glow starts (0 = starts at the terminator, 1 = only dead-on sunlight triggers it).
+// TranslucencyPower/TranslucencyScale shape the falloff and brightness; Attenuation/
+// MaterialThickness (TESR_SkinData) scale its overall strength and tinted by TESR_SkinColor --
+// all from Shaders.Skin.Main in the settings TOML. Since this now requires actual direct
+// sunlight, callers SHOULD multiply it by any sun shadow term (unlike GetRimLight): an object
+// blocking the sun means there is no direct sunlight to glow from, real occlusion or not.
 float3 GetSubsurfaceScattering(float3 lightDirection, float3 normal, float3 lightColor) {
     float ndotl = dot(normal, lightDirection);
-    float transmittance = pow(saturate(TESR_SkinSSSData.x - ndotl), TESR_SkinSSSData.y) * TESR_SkinSSSData.z; // Distortion, Power, Scale
+    float transmittance = pow(saturate(ndotl - TESR_SkinSSSData.x), TESR_SkinSSSData.y) * TESR_SkinSSSData.z; // Threshold, Power, Scale
     transmittance *= TESR_SkinData.x * TESR_SkinData.z; // Attenuation * MaterialThickness
 
     return transmittance * TESR_SkinColor.rgb * lightColor;

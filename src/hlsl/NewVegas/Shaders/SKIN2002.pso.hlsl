@@ -87,16 +87,18 @@ VS_OUTPUT main(VS_INPUT IN) {
     // are compiled in, and ForwardShadows is a live setting that can switch them off.
     float3 shadowNormal = GetShadowGeometricNormal(IN.shadowWorldPos.xyz);
 #if FORWARD_SHADOWS
-    // Forward sun shadow. Scales the direct-reflection SUN terms only; the point light, ambient,
-    // rim and sss are untouched -- rim/sss represent light scattering around/through the surface,
-    // not direct N.L reflection, so they must stay visible where this same shadow test marks the
-    // point self-shadowed (that's the backlit condition they exist to show).
+    // Forward sun shadow. Scales the direct-reflection SUN terms and sss -- sss now requires
+    // actual direct sunlight (it glows on the sun-facing side, not the backlit side), so an
+    // object blocking the sun should zero it out same as diffuse/spec. The point light and rim
+    // stay untouched: rim represents light scattering around the silhouette, not direct N.L
+    // reflection, and shows on the side of the surface this same shadow test marks self-shadowed.
     // ddx/ddy must stay at top level, outside dynamic flow control.
     float sunShadow = SHADOW_VS_PRESENT(IN.shadowWorldPos.w)
                     ? GetSunShadow(IN.shadowWorldPos.xyz, shadowNormal)
                     : 1.0f;
     diffuse *= sunShadow;
     spec    *= sunShadow;
+    sss     *= sunShadow;
 #endif
 
     float3 lighting = diffuse + rim + spec + sss + pointLightLighting + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f);
