@@ -566,7 +566,7 @@ LightingScale = 1.0                  # Directional and point light scale.
 Saturation = 1.0                     # Color saturation.
 
 [_Shaders.PBR.Status]
-Enabled = false                      # Adds PBR specular formula to object shaders
+Enabled = true                       # Adds PBR specular formula to object shaders
 
 [_Shaders.POM.Main]
 HeightMapScale = 0.4                 # Parallax mapping scale. Keep 0.4 for a widely working value.
@@ -768,7 +768,7 @@ TranslucencyScale = 3.0             # Translucency effect: brightness multiplier
 WrapDiffuse = 0.0                   # Wrap diffuse effect: softens the light falloff at the terminator, like light scattering under the skin (0 = off)
 
 [_Shaders.Skin.Status]
-Enabled = false                     # Not currently used. Replaces the skin shader.
+Enabled = true                      # Replaces the skin shader (needed for the SSS lighting above to run).
 
 
 [_Shaders.Sky.Main]
@@ -887,7 +887,7 @@ LODNoiseScale = 0.7                 # Amount of noise applied to LOD.
 LODNoiseTile = 2.7                  # LOD noise texture tiling modifier.
 
 [_Shaders.Terrain.Status]
-Enabled = false                     # Not currently used. Replaces shaders used by terrain.
+Enabled = true                      # Replaces shaders used by terrain.
 
 [_Shaders.Underwater.Status]
 Enabled = true                      # Post Process underwater fog/godrays/caustics effect.
