@@ -40,16 +40,22 @@ float4 TESR_SkinSSSData;
 
 // Point-light-driven skin translucency for interiors. See Includes/Skin.hlsl's
 // GetSkinTranslucency for the exterior/sun version and full rationale (narrow band straddling
-// the N.L terminator, tinted by the skin's subsurface colour). Duplicated inline here, rather
-// than #included, to avoid this file's local shade/shades/sqr macro redefinitions inside main()
-// colliding with Helpers.hlsl -- this version only uses bare HLSL intrinsics.
+// the N.L terminator, tinted by the skin's subsurface colour, per-channel band width driven by
+// CoeffRed/Green/Blue so red bleeds farther past the terminator than blue). Duplicated inline
+// here, rather than #included, to avoid this file's local shade/shades/sqr macro redefinitions
+// inside main() colliding with Helpers.hlsl -- this version only uses bare HLSL intrinsics.
 float3 SkinTranslucency(float3 lightDirection, float3 normal, float3 lightColor) {
     float ndotl = dot(normal, lightDirection);
-    float width = max(TESR_SkinSSSData.x, 0.001f);
-    float band = saturate(1 - abs(ndotl) / width);
-    float translucency = pow(band, TESR_SkinSSSData.y) * TESR_SkinSSSData.z;
+    float baseWidth = max(TESR_SkinSSSData.x, 0.001f);
+
+    float3 coeff = TESR_SkinColor.rgb;
+    float coeffAvg = max((coeff.r + coeff.g + coeff.b) / 3.0f, 0.001f);
+    float3 width = baseWidth * (coeff / coeffAvg);
+
+    float3 band = saturate(1 - abs(ndotl) / width);
+    float3 translucency = pow(band, TESR_SkinSSSData.y) * TESR_SkinSSSData.z;
     translucency *= TESR_SkinData.x * TESR_SkinData.z;
-    return translucency * TESR_SkinColor.rgb * lightColor;
+    return translucency * coeff * lightColor;
 }
 
 struct VS_INPUT {
