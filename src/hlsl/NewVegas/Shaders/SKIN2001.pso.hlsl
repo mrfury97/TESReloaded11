@@ -71,31 +71,34 @@ VS_OUTPUT main(VS_INPUT IN) {
     float3 normal = getNormal(IN.BaseUV);
 
 
-    float3 lighting = GetLighting(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[0]).rgb);
-    float spec = GetSpecular(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[0]).rgb);
+    // Skin() is the ported OblivionReloaded model (Includes/Skin.hlsl): it takes an already
+    // -computed light amount (what GetLighting returns -- diffuse + fresnel backscatter) and
+    // layers its own indirect/rim/specular terms on top, all driven by Shaders.Skin.Main
+    // (TESR_SkinData/TESR_SkinColor). Everything it returns gets multiplied by albedo below, so
+    // there is no separate spec term added outside the albedo multiply anymore.
+    float3 sunLightColor = PBRLight(PSLightColor[0]).rgb;
+    float3 lightingAmount = GetLighting(lightDirection, eyeDirection, normal, sunLightColor);
 
 
     // Outside the guard: the skylight needs this normal whether or not forward shadows
     // are compiled in, and ForwardShadows is a live setting that can switch them off.
     float3 shadowNormal = GetShadowGeometricNormal(IN.shadowWorldPos.xyz);
 #if FORWARD_SHADOWS
-    // Forward sun shadow. Scales the SUN terms only; ambient-driven terms are untouched.
+    // Forward sun shadow. Scales the SUN term only; ambient-driven terms are untouched.
     // ddx/ddy must stay at top level, outside dynamic flow control.
     float sunShadow = SHADOW_VS_PRESENT(IN.shadowWorldPos.w)
                     ? GetSunShadow(IN.shadowWorldPos.xyz, shadowNormal)
                     : 1.0f;
-    lighting *= sunShadow;
-    spec     *= sunShadow;
+    lightingAmount *= sunShadow;
 #endif
+
+    float3 skinLit = Skin(lightingAmount, sunLightColor, eyeDirection, lightDirection, normal);
 
     float4 baseColor = getBaseColor(IN.BaseUV, FaceGenMap0, FaceGenMap1, BaseMap);
     baseColor.rgb = ApplyVertexColor(baseColor.rgb, IN.color_0.rgb, Toggles);
 
     float4 color = AmbientColor.a >= 1 ? 0 : (baseColor.a - Toggles.w);
-    // Vanilla: max(0, sun*NdotL + sun*0.5*sat(dot(E,-L))*(1-NdotV)^2 + Ambient) * albedo
-    // The middle term is backscatter; GetLighting's fresnel covers it.
-    // Specular sits outside the albedo multiply. SKIN_SPECULAR_STRENGTH defaults to 0.
-    float3 finalColor = max(lighting + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f), 0) * baseColor.rgb + spec;
+    float3 finalColor = max(skinLit + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f), 0) * baseColor.rgb;
 
     color.rgb = ApplyFog(finalColor, IN.color_1, Toggles);
     color.a = baseColor.a * AmbientColor.a;

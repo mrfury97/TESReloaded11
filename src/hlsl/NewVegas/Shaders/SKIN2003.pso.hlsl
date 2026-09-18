@@ -84,11 +84,16 @@ VS_OUTPUT main(VS_INPUT IN) {
     float atten2 = tex2D(AttenuationMap, IN.texcoord_4.zw).x;
     float3 pointLightLighting = getPointLight(pointLightDirection, eyeDirection, PBRLight(PSLightColor[2]).rgb, glowTexture, normal, atten1, atten2);
 
-    // calculate lighting components
-    float3 lighting = GetLighting(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
-    float spec = GetSpecular(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[1]).rgb);
+    // calculate lighting components. Skin() is the ported OblivionReloaded model
+    // (Includes/Skin.hlsl): it takes an already-computed light amount (what GetLighting returns
+    // -- diffuse + fresnel backscatter) and layers its own indirect/rim/specular terms on top,
+    // all driven by Shaders.Skin.Main (TESR_SkinData/TESR_SkinColor). No separate spec term
+    // anymore -- Skin() bakes it in.
+    float3 sunLightColor = PBRLight(PSLightColor[1]).rgb;
+    float3 lightingAmount = GetLighting(lightDirection, eyeDirection, normal, sunLightColor);
+    float3 skinLit = Skin(lightingAmount, sunLightColor, eyeDirection, lightDirection, normal);
 
-    lighting += spec + pointLightLighting + PBRAmbient(AmbientColor.rgb);
+    float3 lighting = skinLit + pointLightLighting + PBRAmbient(AmbientColor.rgb);
     float4 finalColor = float4(lighting * baseColor.rgb, baseColor.a * AmbientColor.a);
     finalColor.rgb = ApplyFog(finalColor.rgb, IN.color_1, Toggles);
 
