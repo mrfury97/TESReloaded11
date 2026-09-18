@@ -49,11 +49,16 @@ float3 Skin(float3 SkinColor, float3 LightColor, float3 CameraDir, float3 LightD
 
 
 float3 GetLighting(float3 lightDirection, float3 eyeDirection, float3 normal, float3 lightColor){
-    float fresnel = sqr(1 - shades(normal, eyeDirection)) * shades(lightDirection, -eyeDirection) * 0.5; // vanilla fresnel that shows when light is behind
+    // Rim light effect: vanilla fresnel that shows when light is behind, now scaled by
+    // RimScalar (TESR_SkinData.w) instead of a hardcoded 0.5 so it can be tuned or disabled.
+    float fresnel = sqr(1 - shades(normal, eyeDirection)) * shades(lightDirection, -eyeDirection) * TESR_SkinData.w;
 
-    // float fresnelCoeff = pows(1 - shades(normal, eyeDir), 5);
-    float diffuse = shades(normal, lightDirection);
-    // float3 fresnel = fresnelCoeff * lightColor * 0.5 * pow(diffuse, TESR_DebugVar.w);
+    // Wrap diffuse effect: softens the N.L falloff around the terminator to fake light
+    // scattering under the skin. WrapDiffuse (TESR_SkinSSSData.w) of 0 reproduces the original
+    // shades(normal, lightDirection) exactly; raising it pushes the falloff past 90 degrees.
+    float wrap = TESR_SkinSSSData.w;
+    float diffuse = saturate((dot(normal, lightDirection) + wrap) / (1 + wrap));
+
     float3 lighting = diffuse * lightColor + fresnel * lightColor;
     return max(lighting, 0);
 }
@@ -62,21 +67,17 @@ float GetSpecular(float3 lightDirection, float3 eyeDirection, float3 normal, flo
     return  pow(shades(normal, normalize(lightDirection + eyeDirection)), TESR_SkinData.y) * luma(lightColor) * SKIN_SPECULAR_STRENGTH;
 }
 
-// Fast screen-space subsurface scattering translucency term (Barre-Brisebois & Bouchard,
+// Translucency effect: fast screen-space subsurface scattering (Barre-Brisebois & Bouchard,
 // "Approximating Translucency for a Fast, Cheap and Convincing Subsurface Scattering Look",
-// GDC 2011). There is no thickness map, so a fixed distortion bends the light vector into the
+// GDC 2011). There is no thickness map, so TranslucencyDistortion bends the light vector into the
 // surface; when the eye ends up roughly facing the light back through the surface (ears, nose,
 // fingers, a cheek backlit by the sun) light "leaks" through and picks up the skin's warm
-// subsurface tint instead of just going dark. Scaled by TESR_SkinData's Attenuation and
-// MaterialThickness and tinted by TESR_SkinColor (Shaders.Skin.Main in the settings TOML), so it
-// shares tuning knobs with the rest of the skin shader rather than adding new constants.
+// subsurface tint instead of just going dark. TranslucencyPower/TranslucencyScale (TESR_SkinSSSData)
+// shape the glow's falloff and brightness; Attenuation/MaterialThickness (TESR_SkinData) scale its
+// overall strength and tinted by TESR_SkinColor -- all from Shaders.Skin.Main in the settings TOML.
 float3 GetSubsurfaceScattering(float3 lightDirection, float3 eyeDirection, float3 normal, float3 lightColor) {
-    const float distortion = 0.4f;
-    const float power = 4.0f;
-    const float scale = 3.0f;
-
-    float3 scatterDir = lightDirection + normal * distortion;
-    float transmittance = pow(saturate(dot(eyeDirection, -scatterDir)), power) * scale;
+    float3 scatterDir = lightDirection + normal * TESR_SkinSSSData.x; // TranslucencyDistortion
+    float transmittance = pow(saturate(dot(eyeDirection, -scatterDir)), TESR_SkinSSSData.y) * TESR_SkinSSSData.z; // TranslucencyPower, TranslucencyScale
     transmittance *= TESR_SkinData.x * TESR_SkinData.z; // Attenuation * MaterialThickness
 
     return transmittance * TESR_SkinColor.rgb * lightColor;

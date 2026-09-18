@@ -13,6 +13,7 @@ float4 Toggles : register(c27); // x:bUseVertexColors, y:fUnknown_FogRelated, z:
 float4 TESR_ReciprocalResolution;
 float4 TESR_SkinData;
 float4 TESR_SkinColor;
+float4 TESR_SkinSSSData;
 float4 TESR_DebugVar;
 
 

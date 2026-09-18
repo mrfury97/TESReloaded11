@@ -755,13 +755,17 @@ Strength = 0.75
 Enabled = false                     # Edge contrast shader to increase detail sharpness.
 
 [_Shaders.Skin.Main]
-Attenuation = 0.84                  # Overall strength of the subsurface scattering transmittance term
+Attenuation = 0.84                  # Translucency effect: overall strength of the backlight transmittance term
 CoeffBlue = 0.12                    # Subsurface tint, blue
 CoeffGreen = 0.22                   # Subsurface tint, green
 CoeffRed = 0.36                     # Subsurface tint, red (skin scatters red/orange wavelengths the most)
-MaterialThickness = 0.12            # How thick the skin looks for light transmission (ears, nose, fingers)
-RimScalar = 0.5                     # Rim light strength (not currently used by the SSS term)
+MaterialThickness = 0.12            # Translucency effect: how thick the skin looks for light transmission (ears, nose, fingers)
+RimScalar = 0.5                     # Rim light effect: strength of the backlit fresnel glow around silhouette edges
 SpecularPower = 0.78
+TranslucencyDistortion = 0.4        # Translucency effect: how far the transmitted light bends around the surface normal
+TranslucencyPower = 4.0             # Translucency effect: falloff sharpness of the backlight glow (higher = tighter, more focused)
+TranslucencyScale = 3.0             # Translucency effect: brightness multiplier of the backlight glow
+WrapDiffuse = 0.0                   # Wrap diffuse effect: softens the light falloff at the terminator, like light scattering under the skin (0 = off)
 
 [_Shaders.Skin.Status]
 Enabled = false                     # Not currently used. Replaces the skin shader.
