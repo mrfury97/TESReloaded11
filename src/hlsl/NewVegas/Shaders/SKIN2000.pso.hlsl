@@ -64,7 +64,8 @@ VS_OUTPUT main(VS_INPUT IN) {
     float3 normal = getNormal(IN.BaseUV);
 
 
-    float3 lighting = GetLighting(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[0]).rgb);
+    float3 diffuse = GetDiffuse(lightDirection, normal, PBRLight(PSLightColor[0]).rgb);
+    float3 rim = GetRimLight(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[0]).rgb);
     float spec = GetSpecular(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[0]).rgb);
     float3 sss = GetSubsurfaceScattering(lightDirection, eyeDirection, normal, PBRLight(PSLightColor[0]).rgb);
 
@@ -73,14 +74,16 @@ VS_OUTPUT main(VS_INPUT IN) {
     // are compiled in, and ForwardShadows is a live setting that can switch them off.
     float3 shadowNormal = GetShadowGeometricNormal(IN.shadowWorldPos.xyz);
 #if FORWARD_SHADOWS
-    // Forward sun shadow. Scales the SUN terms only; ambient-driven terms are untouched.
+    // Forward sun shadow. Scales the direct-reflection SUN terms only; ambient-driven terms are
+    // untouched, and so are rim/sss -- they represent light scattering around/through the
+    // surface, not direct N.L reflection, so they must stay visible where this same shadow test
+    // marks the point self-shadowed (that's the backlit condition they exist to show).
     // ddx/ddy must stay at top level, outside dynamic flow control.
     float sunShadow = SHADOW_VS_PRESENT(IN.shadowWorldPos.w)
                     ? GetSunShadow(IN.shadowWorldPos.xyz, shadowNormal)
                     : 1.0f;
-    lighting *= sunShadow;
-    spec     *= sunShadow;
-    sss      *= sunShadow; // transmitted light shouldn't punch through a shadowed sun
+    diffuse *= sunShadow;
+    spec    *= sunShadow;
 #endif
 
     float4 baseColor = getBaseColor(IN.BaseUV, FaceGenMap0, FaceGenMap1, BaseMap);
@@ -88,9 +91,9 @@ VS_OUTPUT main(VS_INPUT IN) {
 
     float4 color = AmbientColor.a >= 1 ? 0 : (baseColor.a - Toggles.w);
     // Vanilla: max(0, sun*NdotL + sun*0.5*sat(dot(E,-L))*(1-NdotV)^2 + Ambient) * albedo
-    // The middle term is backscatter; GetLighting's fresnel covers it.
+    // The middle term is backscatter; GetRimLight covers it.
     // Specular sits outside the albedo multiply. SKIN_SPECULAR_STRENGTH defaults to 0.
-    float3 finalColor = max(lighting + sss + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f), 0) * baseColor.rgb + spec;
+    float3 finalColor = max(diffuse + rim + sss + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f), 0) * baseColor.rgb + spec;
 
     color.rgb = ApplyFog(finalColor, IN.color_1, Toggles);
     color.a = baseColor.a * AmbientColor.a;
