@@ -627,8 +627,20 @@ PS_OUTPUT main(PS_INPUT IN) {
         // ddx/ddy must stay at pixel-shader top level, so derive the world normal here rather
         // than inside getAmbientLighting.
         float3 ambNormal = GetShadowGeometricNormal(IN.shadowWorldPos.xyz);
-        lighting += getAmbientLighting(AmbientColor.rgb, baseColor.rgb, ambNormal,
+        float3 ambientLighting = getAmbientLighting(AmbientColor.rgb, baseColor.rgb, ambNormal,
                                        SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f);
+
+        // Forward sun shadow also dims ambient/sky light now, floored at (1 - Darkness) instead
+        // of left untouched -- see GetShadowDarkness in Includes/Shadow.hlsl. Reuses sunShadow
+        // from above rather than recomputing it: that variable only exists when POINT is
+        // undefined (light slot 0 is the sun), which is exactly the case that matters here -- when
+        // POINT is defined instead, slot 0 is a substituted point light and there is no sun to be
+        // shadowed from, so ambient is left alone, same as before.
+        #if !defined(POINT)
+            ambientLighting *= GetShadowDarkness(sunShadow);
+        #endif
+
+        lighting += ambientLighting;
     #endif
 
     // Other light sources.
@@ -813,8 +825,17 @@ PS_OUTPUT main(PS_INPUT IN) {
     
     // ddx/ddy must stay at pixel-shader top level.
     float3 ambNormal = GetShadowGeometricNormal(SHADOW_WP_LOAD(IN));
-    lighting += getAmbientLighting(AmbientColor.rgb, baseColor.rgb, ambNormal,
+    float3 ambientLighting = getAmbientLighting(AmbientColor.rgb, baseColor.rgb, ambNormal,
                                    SHADOW_WP_VALID(IN) ? 1.0f : 0.0f);
+
+    // Forward sun shadow also dims ambient/sky light now, floored at (1 - Darkness) instead of
+    // left untouched -- see the LIGHTS < 4 variant's GetShadowDarkness comment. Reuses sunShadow
+    // from above, which only exists when OPT is undefined (slot 0 is the sun).
+    #ifndef OPT
+        ambientLighting *= GetShadowDarkness(sunShadow);
+    #endif
+
+    lighting += ambientLighting;
 
     // TODO: Vanilla attenuates the full specular term by IN.lPosition.w for some reason. Is this a problem?
     float3 finalColor = lighting;
