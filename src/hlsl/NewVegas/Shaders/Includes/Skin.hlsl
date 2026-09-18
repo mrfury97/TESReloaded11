@@ -75,15 +75,36 @@ float GetSpecular(float3 lightDirection, float3 eyeDirection, float3 normal, flo
 // function does not read TESR_ShadowData itself: see each SKIN*.pso.hlsl's sunShadow handling)
 // letting the sun-shadow multiply be dialled from 0 (translucency ignores shadows) to 1 (fully
 // gated like diffuse), since how much that trade-off matters depends on shadow map resolution
-// and how much of this band ends up flagged self-shadowed near grazing angles.
+// and how much of this band ends up flagged self-shadowed near grazing angles. Shared by both
+// layers below -- which depth the light scattered through doesn't change whether an object
+// actually blocking the sun should suppress it.
+//
+// One terminator-straddling band: width/power/scale/tint are all caller-supplied so the same
+// math drives both the shallow and deep-scatter layers in GetSkinTranslucency below.
+float3 GetSkinScatterBand(float ndotl, float width, float power, float scale, float3 tint, float3 lightColor) {
+    width = max(width, 0.001f);
+    float band = saturate(1 - abs(ndotl) / width);
+    float translucency = pow(band, power) * scale;
+    return translucency * tint * lightColor;
+}
+
+// Two independently-tunable layers approximating multi-depth subsurface scattering. "Shallow"
+// (TranslucencyWidth/Power/Scale, CoeffRed/Green/Blue) is a narrow, bright band hugging the N.L
+// terminator -- light that barely dips under the surface before re-emerging. "Deep"
+// (DeepScatterWidth/Power/Scale, DeepCoeffRed/Green/Blue) is a second, wider and dimmer band
+// modelling light that scatters further through tissue before re-emerging -- why real backlit
+// skin (ears, nose, fingers held to a light) shows a tight near-white/yellow core edge with a
+// broader, more saturated red halo around it, rather than one flat-colored glow.
 float3 GetSkinTranslucency(float3 lightDirection, float3 normal, float3 lightColor) {
     float ndotl = dot(normal, lightDirection);
-    float width = max(TESR_SkinSSSData.x, 0.001f); // TranslucencyWidth
-    float band = saturate(1 - abs(ndotl) / width);
-    float translucency = pow(band, TESR_SkinSSSData.y) * TESR_SkinSSSData.z; // Power, Scale
-    translucency *= TESR_SkinData.x * TESR_SkinData.z; // Attenuation * MaterialThickness
+    float atten = TESR_SkinData.x * TESR_SkinData.z; // Attenuation * MaterialThickness
 
-    return translucency * TESR_SkinColor.rgb * lightColor;
+    float3 shallow = GetSkinScatterBand(ndotl, TESR_SkinSSSData.x, TESR_SkinSSSData.y, TESR_SkinSSSData.z,
+                                         TESR_SkinColor.rgb, lightColor);
+    float3 deep    = GetSkinScatterBand(ndotl, TESR_SkinSSSData2.x, TESR_SkinSSSData2.y, TESR_SkinSSSData2.z,
+                                         TESR_SkinDeepColor.rgb, lightColor);
+
+    return (shallow + deep) * atten;
 }
 
 float3 getNormal(float2 uv){
