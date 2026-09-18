@@ -34,6 +34,24 @@ float4 PSLightColor[10] : register(c3);
 
 #include "Includes/PBRScale.hlsl"
 
+float4 TESR_SkinData;
+float4 TESR_SkinColor;
+float4 TESR_SkinSSSData;
+
+// Point-light-driven skin translucency for interiors. See Includes/Skin.hlsl's
+// GetSkinTranslucency for the exterior/sun version and full rationale (narrow band straddling
+// the N.L terminator, tinted by the skin's subsurface colour). Duplicated inline here, rather
+// than #included, to avoid this file's local shade/shades/sqr macro redefinitions inside main()
+// colliding with Helpers.hlsl -- this version only uses bare HLSL intrinsics.
+float3 SkinTranslucency(float3 lightDirection, float3 normal, float3 lightColor) {
+    float ndotl = dot(normal, lightDirection);
+    float width = max(TESR_SkinSSSData.x, 0.001f);
+    float band = saturate(1 - abs(ndotl) / width);
+    float translucency = pow(band, TESR_SkinSSSData.y) * TESR_SkinSSSData.z;
+    translucency *= TESR_SkinData.x * TESR_SkinData.z;
+    return translucency * TESR_SkinColor.rgb * lightColor;
+}
+
 struct VS_INPUT {
     float3 texcoord_1 : TEXCOORD1_centroid;			// partial precision
     float3 texcoord_2 : TEXCOORD2_centroid;			// partial precision
@@ -93,11 +111,16 @@ VS_OUTPUT main(VS_INPUT IN) {
     r0.xyz = (q7.x * r1.xyz) + ((q5.x * const_4.xyz) + q76.xyz);			// partial precision
     r2.xyz = ((q10.x * shades(q8.xyz, -IN.texcoord_1)) * const_3.xyz) * 0.5;			// partial precision
     q14.xyz = (saturate((1 - att11.x) - att12.x) * r0.xyz) + ((shades(q2.xyz, IN.texcoord_1.xyz) * const_3.xyz) + r2.xyz);			// partial precision
+
+    // Interior skin translucency, driven by this technique's point light, scaled by its own
+    // distance attenuation -- no sun shadow involved.
+    float3 sss = SkinTranslucency(normalize(IN.texcoord_2.xyz), q2.xyz, const_4.xyz) * saturate((1 - att11.x) - att12.x);
+
     // Vanilla ends: texld_pp r4, t0, s0 / add_pp r4.xyz, r0, c1 / mov_pp oC0, r4 -- one
     // register carries the base texture's alpha and then has .xyz overwritten by the lighting
     // sum, so .a comes from texel0 above. The lighting sum is the output; this pass applies
     // no albedo.
-    OUT.color_0.rgb = q14.xyz + PBRAmbient(AmbientColor.rgb);			// partial precision
+    OUT.color_0.rgb = q14.xyz + sss + PBRAmbient(AmbientColor.rgb);			// partial precision
 
     return OUT;
 };

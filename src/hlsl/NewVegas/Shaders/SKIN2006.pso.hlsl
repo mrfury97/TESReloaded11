@@ -127,7 +127,14 @@ VS_OUTPUT main(VS_INPUT IN) {
 #endif
 
     r1.yzw = (saturate((1 - att3.x) - att4.x) * q40.xyz) + sunTerm;			// partial precision
-    r6.xyz = ((r2.w * ((q19.x * r4.yzw) + r0.yzw)) + r1.yzw) + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f);			// partial precision
+
+    // Interior skin translucency, driven by the two point lights this technique carries
+    // (lamps/candles), each scaled by that light's own distance attenuation -- no sun shadow
+    // involved, since these are the lights that actually matter indoors.
+    float3 sss1 = GetSkinTranslucency(normalize(IN.texcoord_2.xyz), q6.xyz, PointLight1Color.rgb) * saturate((1 - att3.x) - att4.x);
+    float3 sss2 = GetSkinTranslucency(normalize(IN.texcoord_3.xyz), q6.xyz, PointLight2Color.rgb) * r2.w;
+
+    r6.xyz = ((r2.w * ((q19.x * r4.yzw) + r0.yzw)) + r1.yzw) + sss1 + sss2 + PBRAmbient(AmbientColor.rgb) + SkyAmbient(shadowNormal, SHADOW_VS_PRESENT(IN.shadowWorldPos.w) ? 1.0f : 0.0f);			// partial precision
 
     // Was a debug override: selectColor(TESR_DebugVar.x, ...) emitted a flat light colour
     // unless the dev var was zero. Kept only the real result.
