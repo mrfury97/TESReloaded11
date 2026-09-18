@@ -756,9 +756,9 @@ Enabled = false                     # Edge contrast shader to increase detail sh
 
 [_Shaders.Skin.Main]
 Attenuation = 0.84                  # Overall strength of the translucency term
-CoeffBlue = 0.12                    # Subsurface tint and band width, blue (narrowest -- absorbed soonest)
-CoeffGreen = 0.22                   # Subsurface tint and band width, green
-CoeffRed = 0.36                     # Subsurface tint and band width, red (skin scatters red/orange wavelengths the most, so it bleeds widest past the terminator)
+CoeffBlue = 0.12                    # Subsurface tint, blue
+CoeffGreen = 0.22                   # Subsurface tint, green
+CoeffRed = 0.36                     # Subsurface tint, red (skin scatters red/orange wavelengths the most)
 MaterialThickness = 0.12            # How thick the skin looks for light transmission (ears, nose, fingers)
 RimScalar = 0.5
 SpecularPower = 0.78

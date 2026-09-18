@@ -76,27 +76,14 @@ float GetSpecular(float3 lightDirection, float3 eyeDirection, float3 normal, flo
 // letting the sun-shadow multiply be dialled from 0 (translucency ignores shadows) to 1 (fully
 // gated like diffuse), since how much that trade-off matters depends on shadow map resolution
 // and how much of this band ends up flagged self-shadowed near grazing angles.
-//
-// Band width is per-channel rather than shared: real skin scatters red/orange light farther
-// through tissue than green, and green farther than blue, which is why a backlit ear or nose
-// reads red-edged rather than a single flat-tinted glow. CoeffRed/Green/Blue were already
-// labelled for this ("skin scatters red/orange wavelengths the most") but previously only
-// tinted one shared-width band after the fact. Normalizing by the coefficients' average keeps
-// TranslucencyWidth controlling the mean band size while the coefficients' RATIOS spread each
-// channel's band wider or narrower around that mean.
 float3 GetSkinTranslucency(float3 lightDirection, float3 normal, float3 lightColor) {
     float ndotl = dot(normal, lightDirection);
-    float baseWidth = max(TESR_SkinSSSData.x, 0.001f); // TranslucencyWidth
-
-    float3 coeff = TESR_SkinColor.rgb; // CoeffRed/Green/Blue
-    float coeffAvg = max((coeff.r + coeff.g + coeff.b) / 3.0f, 0.001f);
-    float3 width = baseWidth * (coeff / coeffAvg);
-
-    float3 band = saturate(1 - abs(ndotl) / width);
-    float3 translucency = pow(band, TESR_SkinSSSData.y) * TESR_SkinSSSData.z; // Power, Scale
+    float width = max(TESR_SkinSSSData.x, 0.001f); // TranslucencyWidth
+    float band = saturate(1 - abs(ndotl) / width);
+    float translucency = pow(band, TESR_SkinSSSData.y) * TESR_SkinSSSData.z; // Power, Scale
     translucency *= TESR_SkinData.x * TESR_SkinData.z; // Attenuation * MaterialThickness
 
-    return translucency * coeff * lightColor;
+    return translucency * TESR_SkinColor.rgb * lightColor;
 }
 
 float3 getNormal(float2 uv){
