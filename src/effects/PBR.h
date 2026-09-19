@@ -119,6 +119,7 @@ public:
 		float Saturation;
 		float SkylightingScale;
 		float SkylightingDirectionality;
+		float AmbientDirectionality; // 0 = flat (original behaviour), 1 = full one-term hemisphere.
 	};
 	struct PBRSettingsStruct {
 		PBRSettings Default;

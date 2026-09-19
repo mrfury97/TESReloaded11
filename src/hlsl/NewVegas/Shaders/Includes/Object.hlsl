@@ -133,7 +133,19 @@ float3 getAmbientLighting(float3 ambient, float3 albedo) {
 }
 
 float3 getAmbientLighting(float3 ambient, float3 albedo, float3 worldNormal, float worldNormalValid) {
-    float3 flatAmbient = ambient * TESR_PBRData.w;
+    // Same cosine-weighted "facing up" factor SkyAmbientRadiance uses for its own hemisphere
+    // term below (w = (1 + N.up) / 2). AmbientDirectionality (TESR_PBRExtraData.w) blends the
+    // flat weather ambient toward it: 0 (default) reproduces the original fully flat ambient
+    // exactly; 1 makes it a true one-term hemisphere light, so a straight-down-facing surface
+    // gets none of it. Unlike SkylightingScale below, this isn't zeroed indoors -- it only needs
+    // the surface normal, not the exterior sky SH coefficients, so it's the one ambient cue that
+    // still adds shape to interior/point-lit surfaces.
+    //
+    // Gated by worldNormalValid the same way skyTerm is below, since worldNormal itself is
+    // undefined under a vanilla VS: multiplying it into the blend factor (rather than the
+    // result) keeps this on the same footing as that existing pattern.
+    float wUp = 0.5f * dot(worldNormal, float3(0.0f, 0.0f, 1.0f)) + 0.5f;
+    float3 flatAmbient = ambient * TESR_PBRData.w * lerp(1.0f, wUp, TESR_PBRExtraData.w * worldNormalValid);
 
     // AmbientScale (TESR_PBRData.w) scales the weather ambient above but not this: the sky is a
     // second, independent light source, so SkylightingScale is its only strength knob and it
