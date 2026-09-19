@@ -528,8 +528,6 @@ SkylightingMode = 0                  # 0 spherical harmonics, 1 directional samp
 SkylightingDirectionality = 0.6      # Mode 1 only: 0 samples straight up, 1 along the normal.
 LightingScale = 1.0                  # Directional and point light scale.
 Saturation = 1.0                     # Color saturation.
-ClearcoatStrength = 0.0              # Extra glossy top-coat specular lobe (wet/varnished look), on top of the base material. 0 disables it entirely.
-ClearcoatRoughness = 0.05            # Roughness of the coat itself, independent of the base material's roughness -- a coat is normally much smoother than what's underneath it.
 
 [_Shaders.PBR.Rain]
 Roughness = 1.0                      # Roughness scale.
@@ -539,8 +537,6 @@ SkylightingScale = 1.0               # Sky-colour ambient boost. 0 disables it.
 SkylightingDirectionality = 0.6      # Mode 1 only: 0 samples straight up, 1 along the normal.
 LightingScale = 1.0                  # Directional and point light scale.
 Saturation = 1.0                     # Color saturation.
-ClearcoatStrength = 0.0              # Extra glossy top-coat specular lobe (wet/varnished look), on top of the base material. 0 disables it entirely.
-ClearcoatRoughness = 0.05            # Roughness of the coat itself, independent of the base material's roughness -- a coat is normally much smoother than what's underneath it.
 
 [_Shaders.PBR.Night]
 Roughness = 1.0                      # Roughness scale.
@@ -550,8 +546,6 @@ SkylightingScale = 1.0               # Sky-colour ambient boost. 0 disables it.
 SkylightingDirectionality = 0.6      # Mode 1 only: 0 samples straight up, 1 along the normal.
 LightingScale = 1.0                  # Directional and point light scale.
 Saturation = 1.0                     # Color saturation.
-ClearcoatStrength = 0.0              # Extra glossy top-coat specular lobe (wet/varnished look), on top of the base material. 0 disables it entirely.
-ClearcoatRoughness = 0.05            # Roughness of the coat itself, independent of the base material's roughness -- a coat is normally much smoother than what's underneath it.
 
 [_Shaders.PBR.NightRain]
 Roughness = 1.0                      # Roughness scale.
@@ -561,8 +555,6 @@ SkylightingScale = 1.0               # Sky-colour ambient boost. 0 disables it.
 SkylightingDirectionality = 0.6      # Mode 1 only: 0 samples straight up, 1 along the normal.
 LightingScale = 1.0                  # Directional and point light scale.
 Saturation = 1.0                     # Color saturation.
-ClearcoatStrength = 0.0              # Extra glossy top-coat specular lobe (wet/varnished look), on top of the base material. 0 disables it entirely.
-ClearcoatRoughness = 0.05            # Roughness of the coat itself, independent of the base material's roughness -- a coat is normally much smoother than what's underneath it.
 
 [_Shaders.PBR.Interiors]
 Roughness = 1.0                      # Roughness scale.
@@ -572,8 +564,6 @@ SkylightingScale = 0.0               # Sky-colour ambient boost. Off indoors: th
 SkylightingDirectionality = 0.6      # Mode 1 only: 0 samples straight up, 1 along the normal.
 LightingScale = 1.0                  # Directional and point light scale.
 Saturation = 1.0                     # Color saturation.
-ClearcoatStrength = 0.0              # Extra glossy top-coat specular lobe (wet/varnished look), on top of the base material. 0 disables it entirely.
-ClearcoatRoughness = 0.05            # Roughness of the coat itself, independent of the base material's roughness -- a coat is normally much smoother than what's underneath it.
 
 [_Shaders.PBR.Status]
 Enabled = true                       # Adds PBR specular formula to object shaders

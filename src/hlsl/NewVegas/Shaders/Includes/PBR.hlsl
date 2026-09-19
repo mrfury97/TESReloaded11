@@ -73,32 +73,6 @@ float3 BRDF(float roughness, float3 fresnel, float NdotV, float NdotL, float Ndo
     return num/denom;
 }
 
-// Clearcoat: a second, independent GGX specular lobe representing a thin glossy top coat
-// (varnish/wax/wet-look finish) layered over the base material -- common on leather, painted
-// metal, and coated fabric. Always dielectric (fixed F0 = 0.04, the standard value for a clear
-// polyurethane-like coating at normal incidence) regardless of the base material's own
-// metallicness/albedo -- a clear coat has no pigment of its own to tint or absorb into -- and
-// driven by its own roughness rather than the base layer's, since a coat is typically much
-// smoother than what's underneath it. Purely additive: does not attenuate the base layer, so
-// strength = 0 is an exact no-op, and reuses BRDF() (same D/G/Fresnel as the base lobe) rather
-// than a separate implementation.
-float3 ClearcoatSpecular(float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor, float roughness, float strength) {
-    normal = normalize(normal);
-    eyeDir = normalize(eyeDir);
-    lightDir = normalize(lightDir);
-
-    const float3 halfway = normalize(eyeDir + lightDir);
-    const float NdotL = max(shades(normal, lightDir), 0.00001);
-    const float NdotV = max(shades(normal, eyeDir), 0.00001);
-    const float NdotH = shades(normal, halfway);
-    const float LdotH = shades(lightDir, halfway);
-
-    const float3 fresnel = Fresnel(float(0.04).rrr, (1.0).xxx, LdotH);
-    const float3 spec = BRDF(roughness, fresnel, NdotV, NdotL, NdotH);
-
-    return spec * NdotL * lightColor * PI * strength;
-}
-
 float3 PBRDiffuse(float metallicness, float roughness, float3 albedo, float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor) {
     normal = normalize(normal);
     lightDir = normalize(lightDir);
@@ -115,13 +89,13 @@ float3 PBRDiffuse(float metallicness, float roughness, float3 albedo, float3 nor
     return diffuse * NdotL * lightColor * PI;
 }
 
-float3 PBRSpecular(float metallicness, float roughness, float3 albedo, float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor, float clearcoatRoughness = 0.0, float clearcoatStrength = 0.0) {
+float3 PBRSpecular(float metallicness, float roughness, float3 albedo, float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor) {
     const float3 reflectance = lerp(float(0.04).rrr, albedo, metallicness);
-
+    
     normal = normalize(normal);
     eyeDir = normalize(eyeDir);
     lightDir = normalize(lightDir);
-
+    
     const float3 halfway = normalize(eyeDir + lightDir);
     const float NdotL = max(shades(normal, lightDir), 0.00001);
     const float NdotV = max(shades(normal, eyeDir), 0.00001);
@@ -129,20 +103,19 @@ float3 PBRSpecular(float metallicness, float roughness, float3 albedo, float3 no
     const float LdotH = shades(lightDir, halfway);
 
     const float3 fresnel = Fresnel(reflectance, (1.0).xxx, LdotH);
-
+    
     const float3 spec = BRDF(roughness, fresnel, NdotV, NdotL, NdotH);
-    const float3 clearcoat = ClearcoatSpecular(normal, eyeDir, lightDir, lightColor, clearcoatRoughness, clearcoatStrength);
 
-    return spec * NdotL * lightColor * PI + clearcoat;
+    return spec * NdotL * lightColor * PI;
 }
 
-float3 PBR(float metallicness, float roughness, float3 albedo, float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor, float clearcoatRoughness = 0.0, float clearcoatStrength = 0.0) {
+float3 PBR(float metallicness, float roughness, float3 albedo, float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor) {
     const float3 reflectance = lerp(float(0.04).rrr, albedo, metallicness);
-
+    
     normal = normalize(normal);
     eyeDir = normalize(eyeDir);
     lightDir = normalize(lightDir);
-
+    
     const float3 halfway = normalize(eyeDir + lightDir);
     const float NdotL = max(shades(normal, lightDir), 0.00001);
     const float NdotV = max(shades(normal, eyeDir), 0.00001);
@@ -150,33 +123,32 @@ float3 PBR(float metallicness, float roughness, float3 albedo, float3 normal, fl
     const float LdotH = shades(lightDir, halfway);
 
     const float3 fresnel = Fresnel(reflectance, (1.0).xxx, LdotH);
-
+    
     const float3 diffuse = (1 - metallicness) * LambertianDiffuse(albedo, fresnel);
-
+    
     const float3 spec = BRDF(roughness, fresnel, NdotV, NdotL, NdotH);
-    const float3 clearcoat = ClearcoatSpecular(normal, eyeDir, lightDir, lightColor, clearcoatRoughness, clearcoatStrength);
 
-    return (diffuse + spec) * NdotL * lightColor * PI + clearcoat;
+    return (diffuse + spec) * NdotL * lightColor * PI;
 }
 
 #define SUN_RADIUS 0.00918043
 
-float3 PBRSunSpecular(float metallicness, float roughness, float3 albedo, float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor, float clearcoatRoughness = 0.0, float clearcoatStrength = 0.0) {
+float3 PBRSunSpecular(float metallicness, float roughness, float3 albedo, float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor) {
     const float3 reflectance = lerp(float(0.04).rrr, albedo, metallicness);
-
+    
     normal = normalize(normal);
     eyeDir = normalize(eyeDir);
     lightDir = normalize(lightDir);
-
+    
     const float3 reflectDir = reflect(lightDir, normal);
 
     const float radius = sin(SUN_RADIUS);
     const float dist = cos(SUN_RADIUS);
-
+    
     const float3 LdotR = dot(lightDir, reflectDir);
     const float3 closestPoint = reflectDir - LdotR * lightDir;
     const float3 sunDir = LdotR < dist ? normalize(dist * lightDir + normalize(closestPoint) * radius) : reflectDir;
-
+    
     const float3 halfway = normalize(eyeDir + sunDir);
     const float NdotS = max(shades(normal, sunDir), 0.00001);
     const float NdotV = max(shades(normal, eyeDir), 0.00001);
@@ -185,32 +157,28 @@ float3 PBRSunSpecular(float metallicness, float roughness, float3 albedo, float3
     const float LdotH = shades(lightDir, halfway);
 
     const float3 fresnel = Fresnel(reflectance, (1.0).xxx, LdotH);
-
+    
     const float3 spec = BRDF(roughness, fresnel, NdotV, NdotS, NdotH);
-    // sunDir (disc-widened), not lightDir: a near-mirror clearcoat evaluated against the raw
-    // point-light sun direction would only catch the highlight at one exact pixel, same reason
-    // the base lobe above widens it.
-    const float3 clearcoat = ClearcoatSpecular(normal, eyeDir, sunDir, lightColor, clearcoatRoughness, clearcoatStrength);
 
-    return spec * NdotS * lightColor * PI + clearcoat;
+    return spec * NdotS * lightColor * PI;
 }
 
-float3 PBRSun(float metallicness, float roughness, float3 albedo, float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor, float clearcoatRoughness = 0.0, float clearcoatStrength = 0.0) {
+float3 PBRSun(float metallicness, float roughness, float3 albedo, float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor) {
     const float3 reflectance = lerp(float(0.04).rrr, albedo, metallicness);
-
+    
     normal = normalize(normal);
     eyeDir = normalize(eyeDir);
     lightDir = normalize(lightDir);
-
+    
     const float3 reflectDir = reflect(lightDir, normal);
 
     const float radius = sin(SUN_RADIUS);
     const float dist = cos(SUN_RADIUS);
-
+    
     const float3 LdotR = dot(lightDir, reflectDir);
     const float3 closestPoint = reflectDir - LdotR * lightDir;
     const float3 sunDir = LdotR < dist ? normalize(dist * lightDir + normalize(closestPoint) * radius) : reflectDir;
-
+    
     const float3 halfway = normalize(eyeDir + sunDir);
     const float NdotS = max(shades(normal, sunDir), 0.00001);
     const float NdotV = max(shades(normal, eyeDir), 0.00001);
@@ -219,12 +187,10 @@ float3 PBRSun(float metallicness, float roughness, float3 albedo, float3 normal,
     const float LdotH = shades(lightDir, halfway);
 
     const float3 fresnel = Fresnel(reflectance, (1.0).xxx, LdotH);
-
+    
     const float3 diffuse = (1 - metallicness) * LambertianDiffuse(albedo, fresnel);
-
+    
     const float3 spec = BRDF(roughness, fresnel, NdotV, NdotS, NdotH);
-    // sunDir (disc-widened), not lightDir -- see PBRSunSpecular above.
-    const float3 clearcoat = ClearcoatSpecular(normal, eyeDir, sunDir, lightColor, clearcoatRoughness, clearcoatStrength);
 
-    return (diffuse * NdotL + spec * NdotS) * lightColor * PI + clearcoat;
+    return (diffuse * NdotL + spec * NdotS) * lightColor * PI;
 }
