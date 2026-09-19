@@ -121,26 +121,26 @@ CoeffSunR = 1.0
 Enabled = false
 
 [_Shaders.AmbientOcclusion.Exteriors]
-AOClamp = 0.25                          # Lower limit to AO darkness (0 for pure black and 1 for pure white).
-AOIntensity = 1.0                       # Global AO strength/darkness multiplier.
 Bias = 0.05                             # Dot-product bias against self-occlusion acne on flat/curved surfaces.
-BlurRadius = 2.0                        # Blur radius to denoise AO.
-BlurThreshold = 8.0                     # Distance cutoff for areas that shouldn't be blurred together (edge aware denoise).
+BlurDropThreshold = 8.0                 # Distance cutoff for areas that shouldn't be blurred together (edge aware denoise).
+BlurRadiusMultiplier = 2.0              # Blur radius to denoise AO.
+ClampStrength = 0.25                    # Lower limit to AO darkness (0 for pure black and 1 for pure white).
 Enabled = true                          # Enable Ambient occlusion in exteriors.
-LumaThreshold = 0.7                     # Treshold to reduce AO strength on bright surfaces.
-SampleCount = 4                         # Horizon-search steps per side (2 sides, one direction per pass). Higher = smoother, more expensive.
-SampleRadius = 30.0                     # Distance for sampling. Larger values create a softer AO, smaller creates sharper details.
+LumThreshold = 0.7                      # Treshold to reduce AO strength on bright surfaces.
+Range = 30.0                            # Distance for sampling. Larger values create a softer AO, smaller creates sharper details.
+Steps = 4                               # Horizon-search steps per side (2 sides, one direction per pass). Higher = smoother, more expensive.
+StrengthMultiplier = 1.0                # Global AO strength/darkness multiplier.
 
 [_Shaders.AmbientOcclusion.Interiors]
-AOClamp = 0.2                           # Lower limit to AO darkness (0 for pure black and 1 for pure white).
-AOIntensity = 1.0                       # Global AO strength/darkness multiplier.
 Bias = 0.05                             # Dot-product bias against self-occlusion acne on flat/curved surfaces.
-BlurRadius = 2.0                        # Blur radius to denoise AO.
-BlurThreshold = 8.0                     # Distance cutoff for areas that shouldn't be blurred together (edge aware denoise).
+BlurDropThreshold = 8.0                 # Distance cutoff for areas that shouldn't be blurred together (edge aware denoise).
+BlurRadiusMultiplier = 2.0              # Blur radius to denoise AO.
+ClampStrength = 0.2                     # Lower limit to AO darkness (0 for pure black and 1 for pure white).
 Enabled = true                          # Enable Ambient occlusion in exteriors.
-LumaThreshold = 0.5                     # Treshold to reduce AO strength on bright surfaces.
-SampleCount = 4                         # Horizon-search steps per side (2 sides, one direction per pass). Higher = smoother, more expensive.
-SampleRadius = 30.0                     # Distance for sampling. Larger values create a softer AO, smaller creates sharper details.
+LumThreshold = 0.5                      # Treshold to reduce AO strength on bright surfaces.
+Range = 30.0                            # Distance for sampling. Larger values create a softer AO, smaller creates sharper details.
+Steps = 4                               # Horizon-search steps per side (2 sides, one direction per pass). Higher = smoother, more expensive.
+StrengthMultiplier = 1.0                # Global AO strength/darkness multiplier.
 
 [_Shaders.AmbientOcclusion.Status]
 Enabled = true                          # Shadows based on object proximity/creases for more realistic light contribution.
