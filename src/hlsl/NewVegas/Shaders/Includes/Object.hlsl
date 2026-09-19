@@ -20,14 +20,11 @@ float getRoughness(float gloss) {
 }
 
 float getRoughness(float glossmap, float meshgloss){
-    // return pow(glossmap, log(meshgloss));
+    // return pow(glossmap, log(meshgloss));    
     // no gloss = 1
     // full gloss = 0
 
-    // TESR_PBRData.y ([Shaders.PBR.Main] Roughness) must scale this the same way it scales the
-    // 1-argument overload above -- otherwise the global slider goes dead wherever a caller
-    // passes a per-material meshgloss value.
-    return saturate((1 - log(meshgloss) / 4 * glossmap) * TESR_PBRData.y);
+    return saturate(1 - log(meshgloss) / 4 * glossmap);
     // return 1 - saturate(log(meshgloss)/4 + glossmap);
     // return pow(1 - glossmap, meshgloss);
 }
