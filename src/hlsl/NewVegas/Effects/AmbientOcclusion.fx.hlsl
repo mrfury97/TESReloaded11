@@ -1,6 +1,6 @@
 // Ambient Occlusion fullscreen shader for Oblivion/Skyrim Reloaded
 
-#define viewao 0
+#define viewao 1 // TEMP: visualize raw AO to isolate the shoulder/neck blob artifact
 #define halfres 0
 #define GTAO_MAX_STEPS 8 // upper bound for the runtime Steps slider's dynamic loop
 
