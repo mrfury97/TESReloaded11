@@ -119,6 +119,8 @@ public:
 		float Saturation;
 		float SkylightingScale;
 		float SkylightingDirectionality;
+		float ClearcoatStrength;
+		float ClearcoatRoughness;
 	};
 	struct PBRSettingsStruct {
 		PBRSettings Default;
@@ -128,14 +130,6 @@ public:
 		PBRSettings Interiors;
 	};
 	PBRSettingsStruct Settings;
-
-	// [Shaders.PBR.Clearcoat] -- its own section below the weather-blended ones above: a single
-	// flat pair of sliders, not tied to weather/time like Roughness/AmbientScale/etc. are.
-	struct PBRClearcoatSettings {
-		float Strength;
-		float Roughness;
-	};
-	PBRClearcoatSettings ClearcoatSettings;
 
 	struct PBRStruct {
 		D3DXVECTOR4		Data;
