@@ -27,12 +27,6 @@ float getRoughness(float glossmap, float meshgloss){
     // TESR_PBRData.y ([Shaders.PBR.Main] Roughness) must scale this the same way it scales the
     // 1-argument overload above -- otherwise the global slider goes dead wherever a caller
     // passes a per-material meshgloss value.
-    //
-    // meshgloss is vanilla's fSpecularity, floored at 1 before log(): at or below 1 it would
-    // otherwise hit log(<=0) (-infinity, or NaN for a negative material value), which propagates
-    // straight into saturate() and blacks out that pixel's specular for the rest of the frame,
-    // not just this one channel.
-    meshgloss = max(meshgloss, 1.0f);
     return saturate((1 - log(meshgloss) / 4 * glossmap) * TESR_PBRData.y);
     // return 1 - saturate(log(meshgloss)/4 + glossmap);
     // return pow(1 - glossmap, meshgloss);
