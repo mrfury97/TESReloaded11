@@ -1134,13 +1134,19 @@ static bool ShouldHideKey(const char* key) {
 	return false;
 }
 
-// Settings whose read path is commented out in the C++ (dead code) but that
-// still exist in the TOML for compatibility. Greyed out rather than hidden
-// so the keys stay visible/editable-in-file, or removed outright, instead of
-// silently doing nothing behind a live-looking widget.
+// Settings that reach a shader constant but have no effect: either the C++ read path is
+// commented out (dead code), or the shader side never consumes that constant. Greyed out
+// rather than hidden so the keys stay visible/editable-in-file, or removed outright, instead
+// of silently doing nothing behind a live-looking widget.
 static bool IsInertSetting(const char* section, const char* key) {
-	if (strcmp(section, "Shaders.ShadowsExteriors.ShadowMaps") != 0) return false;
-	return strcmp(key, "Mipmaps") == 0 || strcmp(key, "Anisotropy") == 0;
+	if (strcmp(section, "Shaders.ShadowsExteriors.ShadowMaps") == 0)
+		return strcmp(key, "Mipmaps") == 0 || strcmp(key, "Anisotropy") == 0;
+	// TESR_PBRData.x: read into the constant by PBR.cpp, but every PBR()/PBRDiffuse()/etc.
+	// call site in Object.hlsl hardcodes a literal 0 for metallicness instead of reading it --
+	// vanilla FNV materials carry no metalness data to drive it with.
+	if (strncmp(section, "Shaders.PBR.", 12) == 0)
+		return strcmp(key, "Metallicness") == 0;
+	return false;
 }
 
 static const struct { int dik; const char* name; } kDIKTable[] = {
