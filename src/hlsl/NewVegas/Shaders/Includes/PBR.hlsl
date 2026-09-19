@@ -28,33 +28,6 @@ float3 LambertianDiffuse(float3 albedo, float3 fresnel) {
     return (1 - fresnel) * albedo / PI;
 }
 
-// Oren-Nayar rough diffuse (Oren & Nayar 1994). Lambertian diffuse above has zero roughness
-// dependence -- it always cuts off sharply at the terminator (NdotL = 0) no matter how rough
-// the surface is. Real rough/matte surfaces retain more light at grazing angles instead
-// (microfacet self-shadowing/masking on the diffuse lobe), which is the "wrap" Lambertian
-// can't reproduce. Reduces to exactly LambertianDiffuse at roughness = 0 (A=1, B=0), so smooth
-// materials are unaffected -- only rough ones pick up the extra retention.
-// Real-time reformulation of the qualitative model from the original paper: sin(alpha)*tan(beta)
-// is computed directly from NdotL/NdotV instead of via acos, and the azimuthal correlation term
-// uses the L/V projections onto the tangent plane instead of an explicit angle difference.
-float3 OrenNayarDiffuse(float3 albedo, float3 fresnel, float roughness, float NdotL, float NdotV, float3 N, float3 L, float3 V) {
-    float sigma2 = roughness * roughness;
-    float A = 1.0 - 0.5 * sigma2 / (sigma2 + 0.33);
-    float B = 0.45 * sigma2 / (sigma2 + 0.09);
-
-    float3 Lperp = L - N * NdotL;
-    float3 Vperp = V - N * NdotV;
-    float cosPhiDiff = dot(normalize(Lperp), normalize(Vperp));
-
-    float sinThetaL = sqrt(saturate(1.0 - NdotL * NdotL));
-    float sinThetaV = sqrt(saturate(1.0 - NdotV * NdotV));
-
-    float sinAlpha = (NdotL < NdotV) ? sinThetaL : sinThetaV;
-    float tanBeta = (NdotL < NdotV) ? sinThetaV / max(NdotV, 1e-4) : sinThetaL / max(NdotL, 1e-4);
-
-    return (1 - fresnel) * albedo / PI * (A + B * max(0.0, cosPhiDiff) * sinAlpha * tanBeta);
-}
-
 float3 DisneyDiffuse(float3 albedo, float roughness, float NdotV, float NdotL, float LdotH) {
     const float linearRoughness = roughness * roughness;
     
@@ -150,9 +123,9 @@ float3 PBR(float metallicness, float roughness, float3 albedo, float3 normal, fl
     const float LdotH = shades(lightDir, halfway);
 
     const float3 fresnel = Fresnel(reflectance, (1.0).xxx, LdotH);
-
-    const float3 diffuse = (1 - metallicness) * OrenNayarDiffuse(albedo, fresnel, roughness, NdotL, NdotV, normal, lightDir, eyeDir);
-
+    
+    const float3 diffuse = (1 - metallicness) * LambertianDiffuse(albedo, fresnel);
+    
     const float3 spec = BRDF(roughness, fresnel, NdotV, NdotL, NdotH);
 
     return (diffuse + spec) * NdotL * lightColor * PI;
@@ -214,9 +187,9 @@ float3 PBRSun(float metallicness, float roughness, float3 albedo, float3 normal,
     const float LdotH = shades(lightDir, halfway);
 
     const float3 fresnel = Fresnel(reflectance, (1.0).xxx, LdotH);
-
-    const float3 diffuse = (1 - metallicness) * OrenNayarDiffuse(albedo, fresnel, roughness, NdotL, NdotV, normal, lightDir, eyeDir);
-
+    
+    const float3 diffuse = (1 - metallicness) * LambertianDiffuse(albedo, fresnel);
+    
     const float3 spec = BRDF(roughness, fresnel, NdotV, NdotS, NdotH);
 
     return (diffuse * NdotL + spec * NdotS) * lightColor * PI;
