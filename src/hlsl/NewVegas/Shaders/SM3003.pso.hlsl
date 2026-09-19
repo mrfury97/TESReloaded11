@@ -128,9 +128,8 @@ VS_OUTPUT main(VS_INPUT IN) {
         float3 lightSpec = lobe * lightColor * NdotL * atten;
         if (isDirectional) lightSpec *= ToggleNumLights.w;
 
-        // Albedo 1: pure lighting term, tinted albedo multiplied in once below. Separable at
-        // metallicness 0, where reflectance is a constant 0.04.
-        float3 lightDiffuse = PBRDiffuse(0.0f, HAIR_ROUGHNESS, 1.0f, N, eyeT, L, lightColor) * atten;
+        // Albedo 1: pure lighting term, tinted albedo multiplied in once below.
+        float3 lightDiffuse = PBRDiffuse(HAIR_ROUGHNESS, 1.0f, N, eyeT, L, lightColor) * atten;
 
         // Sun only.
         if (isDirectional) {

@@ -71,14 +71,22 @@ float3 getVanillaLightingAtt(float3 lightDir, float att, float3 lightColor, floa
     return lighting;
 }
 
+// metallicness is no longer read in either function body below (PBR()/PBRSun() dropped the
+// metal/albedo blend it fed) -- kept only so existing positional callers (TerrainTemplate.hlsl
+// etc., which explicitly pass 1.0 here) don't shift their trailing parallaxMultiplier/worldNormal
+// arguments out of place.
 float3 getPointLightLighting(float3 lightDir, float att, float3 lightColor, float3 eyeDir, float3 normal, float3 albedo, float gloss = 0.0, float glossPower = 0.0, float metallicness = 1.0) {
     float3 pointlightColor = lightColor * TESR_TerrainData.z;
 
     [branch]
     if (TESR_TerrainExtraData.x){
-        // PBR. 
+        // PBR. PBR()'s first argument is now a dielectric specular (F0) scale, not a metal/albedo
+        // blend -- see Includes/PBR.hlsl. metallicness/TESR_TerrainData.x fed that old blend and
+        // is otherwise unused here now; passing 1.0 keeps the default 0.04 reflectance this
+        // always rendered at anyway (TESR_TerrainData.x, Terrain's own Metallicness setting,
+        // defaults to 0, so this expression was already 0 -- i.e. no metal blend -- in practice).
         float roughness = saturate((1 - gloss) * TESR_TerrainData.y);
-        float3 lighting = PBR(saturate(metallicness * TESR_TerrainData.x), roughness, albedo, normal, eyeDir, lightDir, pointlightColor);
+        float3 lighting = PBR(1.0, roughness, albedo, normal, eyeDir, lightDir, pointlightColor);
         
         return max(0, lighting * att);
     } else {
@@ -106,9 +114,10 @@ float3 getSunLighting(float3 lightDir, float3 sunColor, float3 eyeDir, float3 no
 
     [branch]
     if (TESR_TerrainExtraData.x) {
-        // PBR.
+        // PBR. See the metallicness/TESR_TerrainData.x note in getPointLightLighting above --
+        // same reasoning, PBRSun()'s first argument is now a specular scale, not a metal blend.
         float roughness = saturate((1 - gloss) * TESR_TerrainData.y);
-        float3 lighting = PBRSun(saturate(metallicness * TESR_TerrainData.x), roughness, color, normal, eyeDir, lightDir, lightColor);
+        float3 lighting = PBRSun(1.0, roughness, color, normal, eyeDir, lightDir, lightColor);
         return max(0, lighting + ambientColor * color);
     } else {
         // Vanilla, no specular.

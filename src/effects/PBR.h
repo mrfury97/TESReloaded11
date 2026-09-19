@@ -115,7 +115,8 @@ public:
 		float LightScale;
 		float AmbientScale;
 		float Roughness;
-		float Metallicness;
+		float Specular; // Dielectric F0 scale. Was "Metallicness" -- a metal/albedo blend vanilla
+		                // FNV materials never had data for, so it always sat at 0 (a no-op).
 		float Saturation;
 		float SkylightingScale;
 		float SkylightingDirectionality;
