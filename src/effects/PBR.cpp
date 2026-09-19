@@ -14,7 +14,6 @@ void PBRShaders::UpdateSettings() {
 	Settings.Default.AmbientScale = TheSettingManager->GetSettingF("Shaders.PBR.Main", "AmbientScale");
 	Settings.Default.SkylightingScale = TheSettingManager->GetSettingF("Shaders.PBR.Main", "SkylightingScale");
 	Settings.Default.SkylightingDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Main", "SkylightingDirectionality");
-	Settings.Default.AmbientDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Main", "AmbientDirectionality");
 
 	Settings.Rain.Saturation = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "Saturation");
 	Settings.Rain.Metallicness = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "Metallicness");
@@ -23,7 +22,6 @@ void PBRShaders::UpdateSettings() {
 	Settings.Rain.AmbientScale = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "AmbientScale");
 	Settings.Rain.SkylightingScale = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "SkylightingScale");
 	Settings.Rain.SkylightingDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "SkylightingDirectionality");
-	Settings.Rain.AmbientDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "AmbientDirectionality");
 
 	Settings.Night.Saturation = TheSettingManager->GetSettingF("Shaders.PBR.Night", "Saturation");
 	Settings.Night.Metallicness = TheSettingManager->GetSettingF("Shaders.PBR.Night", "Metallicness");
@@ -32,7 +30,6 @@ void PBRShaders::UpdateSettings() {
 	Settings.Night.AmbientScale = TheSettingManager->GetSettingF("Shaders.PBR.Night", "AmbientScale");
 	Settings.Night.SkylightingScale = TheSettingManager->GetSettingF("Shaders.PBR.Night", "SkylightingScale");
 	Settings.Night.SkylightingDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Night", "SkylightingDirectionality");
-	Settings.Night.AmbientDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Night", "AmbientDirectionality");
 
 	Settings.NightRain.Saturation = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "Saturation");
 	Settings.NightRain.Metallicness = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "Metallicness");
@@ -41,7 +38,6 @@ void PBRShaders::UpdateSettings() {
 	Settings.NightRain.AmbientScale = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "AmbientScale");
 	Settings.NightRain.SkylightingScale = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "SkylightingScale");
 	Settings.NightRain.SkylightingDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "SkylightingDirectionality");
-	Settings.NightRain.AmbientDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "AmbientDirectionality");
 
 	Settings.Interiors.Saturation = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "Saturation");
 	Settings.Interiors.Metallicness = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "Metallicness");
@@ -50,7 +46,6 @@ void PBRShaders::UpdateSettings() {
 	Settings.Interiors.AmbientScale = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "AmbientScale");
 	Settings.Interiors.SkylightingScale = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "SkylightingScale");
 	Settings.Interiors.SkylightingDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "SkylightingDirectionality");
-	Settings.Interiors.AmbientDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "AmbientDirectionality");
 }
 
 void PBRShaders::UpdateConstants() {
@@ -78,10 +73,4 @@ void PBRShaders::UpdateConstants() {
 		TheShaderManager->GetTransitionValue(Settings.Rain.LightScale, Settings.NightRain.LightScale, Settings.Interiors.LightScale), rainFactor);
 	Constants.Data.w = std::lerp(TheShaderManager->GetTransitionValue(Settings.Default.AmbientScale, Settings.Night.AmbientScale, Settings.Interiors.AmbientScale),
 		TheShaderManager->GetTransitionValue(Settings.Rain.AmbientScale, Settings.NightRain.AmbientScale, Settings.Default.AmbientScale), rainFactor);
-
-	// Flat-ambient hemisphere weighting (Includes/Object.hlsl getAmbientLighting). Unlike
-	// SkylightingScale, this applies indoors too -- it only needs the surface normal, not the
-	// exterior sky SH coefficients.
-	Constants.ExtraData.w = std::lerp(TheShaderManager->GetTransitionValue(Settings.Default.AmbientDirectionality, Settings.Night.AmbientDirectionality, Settings.Interiors.AmbientDirectionality),
-		TheShaderManager->GetTransitionValue(Settings.Rain.AmbientDirectionality, Settings.NightRain.AmbientDirectionality, Settings.Interiors.AmbientDirectionality), rainFactor);
 };
