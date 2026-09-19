@@ -23,6 +23,11 @@ float3 Fresnel(float3 f0, float3 f90, float cosine) {
 }
 
 // Diffuse
+// Lambert
+float3 LambertianDiffuse(float3 albedo, float3 fresnel) {
+    return (1 - fresnel) * albedo / PI;
+}
+
 float3 DisneyDiffuse(float3 albedo, float roughness, float NdotV, float NdotL, float LdotH) {
     const float linearRoughness = roughness * roughness;
     
@@ -45,19 +50,15 @@ float GGX(float NdotH, float roughness) {
     return a2 / (PI * d * d);
 }
 
-// V (visibility = G / (4*NdotV*NdotL)), height-correlated Smith. Heitz 2014, "Understanding the
-// Masking-Shadowing Function in Microfacet-Based BRDFs"; this formulation as used in Filament
-// (https://google.github.io/filament/Filament.html#materialsystem/specularbrdf/geometricshadowing(specularg)).
-// Replaces a separable Schlick-Beckmann G1(V)*G1(L): height-correlation is physically correct
-// (a microfacet visible to the eye is more likely visible to the light too, since taller facets
-// occlude both), and this form folds the BRDF's 4*NdotV*NdotL denominator straight in rather
-// than dividing by it separately afterward, avoiding a second near-zero denominator at grazing
-// angles.
-float VisibilitySmithGGXCorrelated(float roughness, float NdotV, float NdotL) {
-    float a2 = pow(roughness, 4);
-    float GGXV = NdotL * sqrt(NdotV * NdotV * (1 - a2) + a2);
-    float GGXL = NdotV * sqrt(NdotL * NdotL * (1 - a2) + a2);
-    return 0.5 / max(GGXV + GGXL, 1e-5);
+// G1
+float ShlickBeckmann(float NdotX, float roughness) {
+    float k = pow(roughness + 1, 2) / 8.0;
+    return NdotX/max(NdotX * (1 - k) + k, 0.00000001);
+}
+
+// Smith
+float GeometryShadowing(float roughness, float NdotV, float NdotL) {
+    return ShlickBeckmann(NdotV, roughness) * ShlickBeckmann(NdotL, roughness);
 }
 
 // F
@@ -67,9 +68,9 @@ float3 FresnelShlick(float3 reflectance, float3 halfway, float3 eyeDir) {
 
 // BRDF
 float3 BRDF(float roughness, float3 fresnel, float NdotV, float NdotL, float NdotH){
-    float D = GGX(NdotH, roughness);
-    float V = VisibilitySmithGGXCorrelated(roughness, NdotV, NdotL);
-    return D * V * fresnel;
+    float3 num = GGX(NdotH, roughness) * GeometryShadowing(roughness, NdotV, NdotL) * fresnel;
+    float denom = 4.0 * NdotV * NdotL;
+    return num/denom;
 }
 
 float3 PBRDiffuse(float metallicness, float roughness, float3 albedo, float3 normal, float3 eyeDir, float3 lightDir, float3 lightColor) {
@@ -122,9 +123,9 @@ float3 PBR(float metallicness, float roughness, float3 albedo, float3 normal, fl
     const float LdotH = shades(lightDir, halfway);
 
     const float3 fresnel = Fresnel(reflectance, (1.0).xxx, LdotH);
-
-    const float3 diffuse = (1 - metallicness) * DisneyDiffuse(albedo, roughness, NdotV, NdotL, LdotH);
-
+    
+    const float3 diffuse = (1 - metallicness) * LambertianDiffuse(albedo, fresnel);
+    
     const float3 spec = BRDF(roughness, fresnel, NdotV, NdotL, NdotH);
 
     return (diffuse + spec) * NdotL * lightColor * PI;
@@ -186,9 +187,9 @@ float3 PBRSun(float metallicness, float roughness, float3 albedo, float3 normal,
     const float LdotH = shades(lightDir, halfway);
 
     const float3 fresnel = Fresnel(reflectance, (1.0).xxx, LdotH);
-
-    const float3 diffuse = (1 - metallicness) * DisneyDiffuse(albedo, roughness, NdotV, NdotL, LdotH);
-
+    
+    const float3 diffuse = (1 - metallicness) * LambertianDiffuse(albedo, fresnel);
+    
     const float3 spec = BRDF(roughness, fresnel, NdotV, NdotS, NdotH);
 
     return (diffuse * NdotL + spec * NdotS) * lightColor * PI;
