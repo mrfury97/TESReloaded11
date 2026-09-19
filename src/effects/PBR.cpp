@@ -3,6 +3,7 @@
 void PBRShaders::RegisterConstants() {
 	TheShaderManager->RegisterConstant("TESR_PBRData", &Constants.Data);
 	TheShaderManager->RegisterConstant("TESR_PBRExtraData", &Constants.ExtraData);
+	TheShaderManager->RegisterConstant("TESR_PBRClearcoat", &Constants.Clearcoat);
 }
 
 
@@ -14,6 +15,8 @@ void PBRShaders::UpdateSettings() {
 	Settings.Default.AmbientScale = TheSettingManager->GetSettingF("Shaders.PBR.Main", "AmbientScale");
 	Settings.Default.SkylightingScale = TheSettingManager->GetSettingF("Shaders.PBR.Main", "SkylightingScale");
 	Settings.Default.SkylightingDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Main", "SkylightingDirectionality");
+	Settings.Default.ClearcoatStrength = TheSettingManager->GetSettingF("Shaders.PBR.Main", "ClearcoatStrength");
+	Settings.Default.ClearcoatRoughness = TheSettingManager->GetSettingF("Shaders.PBR.Main", "ClearcoatRoughness");
 
 	Settings.Rain.Saturation = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "Saturation");
 	Settings.Rain.Metallicness = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "Metallicness");
@@ -22,6 +25,8 @@ void PBRShaders::UpdateSettings() {
 	Settings.Rain.AmbientScale = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "AmbientScale");
 	Settings.Rain.SkylightingScale = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "SkylightingScale");
 	Settings.Rain.SkylightingDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "SkylightingDirectionality");
+	Settings.Rain.ClearcoatStrength = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "ClearcoatStrength");
+	Settings.Rain.ClearcoatRoughness = TheSettingManager->GetSettingF("Shaders.PBR.Rain", "ClearcoatRoughness");
 
 	Settings.Night.Saturation = TheSettingManager->GetSettingF("Shaders.PBR.Night", "Saturation");
 	Settings.Night.Metallicness = TheSettingManager->GetSettingF("Shaders.PBR.Night", "Metallicness");
@@ -30,6 +35,8 @@ void PBRShaders::UpdateSettings() {
 	Settings.Night.AmbientScale = TheSettingManager->GetSettingF("Shaders.PBR.Night", "AmbientScale");
 	Settings.Night.SkylightingScale = TheSettingManager->GetSettingF("Shaders.PBR.Night", "SkylightingScale");
 	Settings.Night.SkylightingDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Night", "SkylightingDirectionality");
+	Settings.Night.ClearcoatStrength = TheSettingManager->GetSettingF("Shaders.PBR.Night", "ClearcoatStrength");
+	Settings.Night.ClearcoatRoughness = TheSettingManager->GetSettingF("Shaders.PBR.Night", "ClearcoatRoughness");
 
 	Settings.NightRain.Saturation = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "Saturation");
 	Settings.NightRain.Metallicness = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "Metallicness");
@@ -38,6 +45,8 @@ void PBRShaders::UpdateSettings() {
 	Settings.NightRain.AmbientScale = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "AmbientScale");
 	Settings.NightRain.SkylightingScale = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "SkylightingScale");
 	Settings.NightRain.SkylightingDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "SkylightingDirectionality");
+	Settings.NightRain.ClearcoatStrength = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "ClearcoatStrength");
+	Settings.NightRain.ClearcoatRoughness = TheSettingManager->GetSettingF("Shaders.PBR.NightRain", "ClearcoatRoughness");
 
 	Settings.Interiors.Saturation = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "Saturation");
 	Settings.Interiors.Metallicness = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "Metallicness");
@@ -46,6 +55,8 @@ void PBRShaders::UpdateSettings() {
 	Settings.Interiors.AmbientScale = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "AmbientScale");
 	Settings.Interiors.SkylightingScale = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "SkylightingScale");
 	Settings.Interiors.SkylightingDirectionality = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "SkylightingDirectionality");
+	Settings.Interiors.ClearcoatStrength = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "ClearcoatStrength");
+	Settings.Interiors.ClearcoatRoughness = TheSettingManager->GetSettingF("Shaders.PBR.Interiors", "ClearcoatRoughness");
 }
 
 void PBRShaders::UpdateConstants() {
@@ -73,4 +84,9 @@ void PBRShaders::UpdateConstants() {
 		TheShaderManager->GetTransitionValue(Settings.Rain.LightScale, Settings.NightRain.LightScale, Settings.Interiors.LightScale), rainFactor);
 	Constants.Data.w = std::lerp(TheShaderManager->GetTransitionValue(Settings.Default.AmbientScale, Settings.Night.AmbientScale, Settings.Interiors.AmbientScale),
 		TheShaderManager->GetTransitionValue(Settings.Rain.AmbientScale, Settings.NightRain.AmbientScale, Settings.Default.AmbientScale), rainFactor);
+
+	Constants.Clearcoat.x = std::lerp(TheShaderManager->GetTransitionValue(Settings.Default.ClearcoatStrength, Settings.Night.ClearcoatStrength, Settings.Interiors.ClearcoatStrength),
+		TheShaderManager->GetTransitionValue(Settings.Rain.ClearcoatStrength, Settings.NightRain.ClearcoatStrength, Settings.Interiors.ClearcoatStrength), rainFactor);
+	Constants.Clearcoat.y = std::lerp(TheShaderManager->GetTransitionValue(Settings.Default.ClearcoatRoughness, Settings.Night.ClearcoatRoughness, Settings.Interiors.ClearcoatRoughness),
+		TheShaderManager->GetTransitionValue(Settings.Rain.ClearcoatRoughness, Settings.NightRain.ClearcoatRoughness, Settings.Interiors.ClearcoatRoughness), rainFactor);
 };

@@ -15,6 +15,11 @@
 float4 TESR_PBRData : register(c32);
 float4 TESR_PBRExtraData : register(c33);
 
+// x: ClearcoatStrength, y: ClearcoatRoughness. [Shaders.PBR.*] Clearcoat*. 0 strength is an
+// exact no-op in PBR.hlsl's ClearcoatSpecular(), so this survives Metallicness/AmbientScale
+// being 0 the same way SkylightingScale does below.
+float4 TESR_PBRClearcoat : register(c34);
+
 float getRoughness(float gloss) {
     return saturate(max(0.043, 1 - gloss) * TESR_PBRData.y);
 }
@@ -80,11 +85,11 @@ float3 getPointLightLighting(float3 lightDir, float radius, float3 lightColor, f
     albedo = lerp(luma(albedo), albedo, TESR_PBRExtraData.x);
     
     float att = vanillaAtt(lightDir, radius);
-    
+
     #if defined(ONLY_SPECULAR)
-        return att * PBRSpecular(0, roughness, albedo, normal, viewDir, lightDir, lightColor);
+        return att * PBRSpecular(0, roughness, albedo, normal, viewDir, lightDir, lightColor, TESR_PBRClearcoat.y, TESR_PBRClearcoat.x);
     #elif defined(SPECULAR)
-        return att * PBR(0, roughness, albedo, normal, viewDir, lightDir, lightColor);
+        return att * PBR(0, roughness, albedo, normal, viewDir, lightDir, lightColor, TESR_PBRClearcoat.y, TESR_PBRClearcoat.x);
     #else
         return att * PBRDiffuse(0, roughness, albedo, normal, viewDir, lightDir, lightColor);
     #endif
@@ -93,11 +98,11 @@ float3 getPointLightLighting(float3 lightDir, float radius, float3 lightColor, f
 float3 getPointLightLightingAtt(float3 lightDir, float att, float3 lightColor, float3 viewDir, float3 normal, float3 albedo, float roughness) {
     lightColor = lightColor * TESR_PBRData.z;
     albedo = lerp(luma(albedo), albedo, TESR_PBRExtraData.x);
-    
+
     #if defined(ONLY_SPECULAR)
-        return att * PBRSpecular(0, roughness, albedo, normal, viewDir, lightDir, lightColor);
+        return att * PBRSpecular(0, roughness, albedo, normal, viewDir, lightDir, lightColor, TESR_PBRClearcoat.y, TESR_PBRClearcoat.x);
     #elif defined(SPECULAR)
-        return att * PBR(0, roughness, albedo, normal, viewDir, lightDir, lightColor);
+        return att * PBR(0, roughness, albedo, normal, viewDir, lightDir, lightColor, TESR_PBRClearcoat.y, TESR_PBRClearcoat.x);
     #else
     return att * PBRDiffuse(0, roughness, albedo, normal, viewDir, lightDir, lightColor);
     #endif
@@ -106,11 +111,11 @@ float3 getPointLightLightingAtt(float3 lightDir, float att, float3 lightColor, f
 float3 getSunLighting(float3 lightDir, float3 lightColor, float3 viewDir, float3 normal, float3 albedo, float roughness) {
     lightColor = lightColor * TESR_PBRData.z;
     albedo = lerp(luma(albedo), albedo, TESR_PBRExtraData.x);
-    
+
     #if defined(ONLY_SPECULAR)
-        return PBRSunSpecular(0, roughness, albedo, normal, viewDir, lightDir, lightColor);
+        return PBRSunSpecular(0, roughness, albedo, normal, viewDir, lightDir, lightColor, TESR_PBRClearcoat.y, TESR_PBRClearcoat.x);
     #elif defined(SPECULAR)
-        return PBRSun(0, roughness, albedo, normal, viewDir, lightDir, lightColor);
+        return PBRSun(0, roughness, albedo, normal, viewDir, lightDir, lightColor, TESR_PBRClearcoat.y, TESR_PBRClearcoat.x);
     #else
         return PBRDiffuse(0, roughness, albedo, normal, viewDir, lightDir, lightColor);
     #endif

@@ -119,6 +119,8 @@ public:
 		float Saturation;
 		float SkylightingScale;
 		float SkylightingDirectionality;
+		float ClearcoatStrength;
+		float ClearcoatRoughness;
 	};
 	struct PBRSettingsStruct {
 		PBRSettings Default;
@@ -132,6 +134,7 @@ public:
 	struct PBRStruct {
 		D3DXVECTOR4		Data;
 		D3DXVECTOR4		ExtraData;
+		D3DXVECTOR4		Clearcoat; // x: strength, y: roughness
 	};
 	PBRStruct	Constants;
 
