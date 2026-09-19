@@ -452,7 +452,10 @@ PS_OUTPUT main(PS_INPUT IN)
         float4 normal = tex2D(NormalMap, offsetUV.xy);
         normal.xyz = normalize(expand(normal.xyz));
 
-        float roughness = getRoughness(normal.a);
+        // glossPower (Toggles.z / vanilla fSpecularity, or the OPT literal 1 above) is the
+        // per-material glossiness already used by getVanillaLightingAtt below -- also feed it
+        // into the PBR roughness calc rather than just the gloss map's per-texel value.
+        float roughness = getRoughness(normal.a, glossPower);
     
         #if !defined(DIFFUSE) && !defined(POINT)
             if (TESR_ParallaxData.y)

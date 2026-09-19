@@ -560,9 +560,18 @@ PS_OUTPUT main(PS_INPUT IN) {
     
     float4 normal = tex2D(NormalMap, IN.uv.xy);
     normal.xyz = normalize(expand(normal.xyz));
-    
+
+    // glossPower (Toggles.z / vanilla fSpecularity) is the per-material glossiness the game
+    // itself bakes into each object's NIF, on top of the gloss MAP's per-texel value and the
+    // global [Shaders.PBR.Main] Roughness scale. Toggles is only declared #ifndef OPT (below),
+    // so glossPower is only readable there -- unlike the other two call sites, this is the one
+    // place in the file glossPower is used, so there's no existing OPT-safe fallback to match.
+#ifndef OPT
+    float roughness = getRoughness(normal.a, glossPower);
+#else
     float roughness = getRoughness(normal.a);
-    
+#endif
+
     //if (TESR_DebugVar.x > 0.0)
     //    roughness = SpecularAA(normal.xyz, roughness, TESR_DebugVar.z);
     
@@ -766,9 +775,11 @@ PS_OUTPUT main(PS_INPUT IN) {
     
     float4 normal = tex2D(NormalMap, IN.uv.xy);
     normal.xyz = normalize(expand(normal.xyz));
-    
-    float roughness = getRoughness(normal.a);
-    
+
+    // glossPow (Toggles.z, or PSLightColor[1].w under OPT) is the per-material glossiness the
+    // game itself bakes into each object's NIF -- see the LIGHTS < 4 variant's comment.
+    float roughness = getRoughness(normal.a, glossPow);
+
     // Lighting.
     float3 viewDir = { IN.lightDir.w, IN.light2.w, IN.light3.w };
     
