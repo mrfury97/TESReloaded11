@@ -129,14 +129,21 @@ float4 GTAO(VSOUT IN, uniform float pass2) : COLOR0
 
 	for (int step = 1; step <= steps; ++step) {
 		float t = (step + noise) / steps;
-		float2 offset = sliceDir * t * uRadius * TESR_ReciprocalResolution.xy;
+
+		// March the actual view-space sample point along the slice direction
+		// and reproject it, instead of stepping uv by a fixed amount -- a
+		// fixed uv-space step covers a wildly different world-space distance
+		// depending on depth (perspective foreshortening), which produced a
+		// flat, depth-banded dark patch instead of real contact occlusion.
+		// This mirrors how the old kernel SSAO placed its samples.
 
 		// Falloff softens the hard Range cutoff: a sample's pull on the
 		// horizon angle is weighted down as it nears uRadius instead of
 		// being an all-or-nothing cutoff. falloff=0 reproduces a hard
 		// cutoff (weight is 1 everywhere inside the radius, same as the
 		// old range check); higher values taper it off more gradually.
-		float3 hv1 = reconstructPosition(uv + offset) - P;
+		float2 sampleUV1 = projectPosition(P + sliceDir3 * t * uRadius).xy;
+		float3 hv1 = reconstructPosition(sampleUV1) - P;
 		float d1 = dot(hv1, hv1);
 		if (d1 < radiusSq) {
 			float a1 = atan2(dot(hv1, orthoDir), dot(hv1, V));
@@ -144,7 +151,8 @@ float4 GTAO(VSOUT IN, uniform float pass2) : COLOR0
 			h1 = max(h1, lerp(h1, a1, w1));
 		}
 
-		float3 hv2 = reconstructPosition(uv - offset) - P;
+		float2 sampleUV2 = projectPosition(P - sliceDir3 * t * uRadius).xy;
+		float3 hv2 = reconstructPosition(sampleUV2) - P;
 		float d2 = dot(hv2, hv2);
 		if (d2 < radiusSq) {
 			float a2 = atan2(dot(hv2, orthoDir), dot(hv2, V));
