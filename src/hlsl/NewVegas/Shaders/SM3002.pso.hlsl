@@ -102,9 +102,10 @@ VS_OUTPUT main(VS_INPUT IN) {
 
         float3 L = normalize(mul(tbn, toLight));
 
-        // Albedo 1: pure lighting term, tinted albedo multiplied in once below. PBRDiffuse reads
-        // neither the eye vector nor roughness, which is why this permutation needs no EyePosition.
-        float3 lightDiffuse = PBRDiffuse(HAIR_ROUGHNESS, 1.0f, N, N, L, lightColor) * atten;
+        // Albedo 1: pure lighting term, tinted albedo multiplied in once below. Separable at
+        // metallicness 0, where reflectance is a constant 0.04. PBRDiffuse reads neither the eye
+        // vector nor roughness, which is why this permutation needs no EyePosition.
+        float3 lightDiffuse = PBRDiffuse(0.0f, HAIR_ROUGHNESS, 1.0f, N, N, L, lightColor) * atten;
 
         // Sun only.
         if (isDirectional) lightDiffuse *= sunShadow;
