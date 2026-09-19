@@ -2,7 +2,7 @@
 
 #define viewao 0
 #define halfres 0
-#define kernelSize 5
+#define GTAO_STEPS 4
 
 float4 TESR_AmbientOcclusionAOData;
 float4 TESR_AmbientOcclusionData;
@@ -65,74 +65,85 @@ float fogCoeff(float depth){
 	return saturate(invlerp(TESR_FogData.x, TESR_FogData.y, depth));
 }
 
-float4 SSAO(VSOUT IN, uniform float2 OffsetMask) : COLOR0
+// Ground Truth AO (Jimenez et al. 2016, "Practical Realtime Strategies for
+// Accurate Indirect Occlusion"). Closed-form integral of cosine-weighted
+// visibility over the arc between horizon angles h1/h2 (measured from V,
+// clamped to n +/- 90deg) around the in-slice angle n of the surface normal.
+float IntegrateArc(float h1, float h2, float n) {
+	float cosN = cos(n);
+	float a = -cos(2.0 * h1 - n) + cosN + 2.0 * h1 * sin(n);
+	float b = -cos(2.0 * h2 - n) + cosN + 2.0 * h2 * sin(n);
+	return 0.25 * (a + b);
+}
+
+// pass2: 0 on the first pass (resets the accumulator), 1 on the second
+// (chains onto the first pass's result the same way the old kernel-split
+// SSAO did) -- also offsets the second pass's slice angle ~90deg from the
+// first so the two passes average two roughly-perpendicular slices.
+float4 GTAO(VSOUT IN, uniform float pass2) : COLOR0
 {
 	float2 uv = IN.UVCoord.xy;
 	float4 color = tex2D(TESR_RenderedBuffer, uv);
-	color = OffsetMask.y?color:float(1).xxxx; // use previous rendered buffer if not first pass
+	color = pass2 ? color : float(1).xxxx; // use previous rendered buffer if not first pass
 
 #if halfres
 	clip ((IN.UVCoord.x < 0.5 && IN.UVCoord.y < 0.5)-1); // discard half the screen to render at half resolution
 	uv *= 2;
 #endif
-	
-	// generate the sampling kernel with random points in a hemisphere
-	// int kernelSize = clamp(AOsamples, 0, 32);
+
+	float3 P = reconstructPosition(uv);
+	if (P.z > endFade) return 1.0;
+
+	float3 N = GetNormal(uv);
+	float3 V = normalize(-P); // view-space direction from the surface to the camera
+
+	float noise = random(uv).x;
+	float sliceAngle = (pass2 * 0.5 + noise * 0.5) * PI;
+	float2 sliceDir = float2(cos(sliceAngle), sin(sliceAngle));
+	float3 sliceDir3 = float3(sliceDir, 0.0);
+
+	// in-slice-plane basis: V is the "zenith" (angle 0), orthoDir the horizon
+	// direction the +side march walks toward.
+	float3 orthoDir = sliceDir3 - V * dot(sliceDir3, V);
+	float orthoLen = length(orthoDir);
+	if (orthoLen < 1e-4) return 1.0; // slice plane degenerate at this pixel
+	orthoDir /= orthoLen;
+
+	// project N into the slice plane; its remaining length is how much this
+	// slice actually contributes (a slice edge-on to N contributes ~0)
+	float3 planeNormal = cross(sliceDir3, V);
+	float3 projN = N - planeNormal * dot(N, planeNormal);
+	float projNLen = max(length(projN), 1e-4);
+	float n = atan2(dot(projN, orthoDir), dot(projN, V));
+
 	float uRadius = abs(AOrange);
-	float bias = saturate(AOangleBias);
+	float h1 = -PI / 2.0; // furthest occluder found on the +orthoDir side
+	float h2 = PI / 2.0;  // furthest occluder found on the -orthoDir side
 
-	float3 origin = reconstructPosition(uv);
-	if (origin.z > endFade) return 1.0;
-
-	//reorient our sample kernel along the origin's normal
-	float3 normal = GetNormal(uv);
-
-	float angle = -random(uv).x / 2 * PI; // random angle between 0 and 90degrees
-	float3 kernelRotation = float3( -sin(angle), cos(angle), 0);
-	float3 tangent = normalize(kernelRotation - normal * dot(kernelRotation, normal));
-	float3 bitangent = cross(normal, tangent);
-	float3x3 tbn = float3x3(tangent, bitangent, normal);
-
-	// calculate occlusion by sampling depth of each point from the kernel
-	float occlusion = 0.0;
 	[unroll]
-	for (int i = 0; i < kernelSize; ++i) {
-		// generate random samples in a unit sphere (random vector coordinates from -1 to 1);
-		float3 rand = random(uv + i * TESR_ReciprocalResolution.x);
-		float3 sampleVector = float3 (expand(rand.xy), rand.z) * float3(OffsetMask, 1); // separate kernel
-		sampleVector = mul(normalize(sampleVector), tbn);
+	for (int step = 1; step <= GTAO_STEPS; ++step) {
+		float t = (step + noise) / GTAO_STEPS;
+		float2 offset = sliceDir * t * uRadius * TESR_ReciprocalResolution.xy;
 
-		//randomize points distance to sphere center, making them more concentrated towards the center
-		sampleVector *= random(uv * i/2);
-		float scale = 1 + float(i) / float(kernelSize);
-		scale = lerp(bias, 1.0f, scale * scale);
-		sampleVector *= scale; 
+		float3 hv1 = reconstructPosition(uv + offset) - P;
+		if (dot(hv1, hv1) < uRadius * uRadius)
+			h1 = max(h1, atan2(dot(hv1, orthoDir), dot(hv1, V)));
 
-		// get sample positions around origin:
-		sampleVector *= dot(normal, sampleVector) < 0.0 ? -1.0 : 1.0; // if our sample vector goes inside the geometry, we flip it
-		float3 samplePoint = origin + sampleVector * uRadius;
-		
-		// compare depth of the projected sample with the value from depthbuffer
-		float3 screenSpaceSample = projectPosition (samplePoint);
-		float sampleDepth = readDepth(screenSpaceSample.xy);
-		float actualDepth = samplePoint.z;
-
-		// range check & accumulate:
-		float distance = abs(actualDepth - sampleDepth);
-		float rangeCheck = distance < uRadius ? 1.0 : 0.0;
-		float influence = (sampleDepth < actualDepth ? 1.0 : 0.0 ) * rangeCheck;
-
-		// stronger strength curve in close vectors (replacing an if statement with a lerp)
-		influence *= lerp(1.0 - distance * distance/(uRadius * uRadius), 1.0 - distance /uRadius, i < kernelSize / 4);
-		occlusion += influence;
+		float3 hv2 = reconstructPosition(uv - offset) - P;
+		if (dot(hv2, hv2) < uRadius * uRadius)
+			h2 = min(h2, atan2(dot(hv2, orthoDir), dot(hv2, V)));
 	}
-	
-	occlusion = 1.0 - occlusion/kernelSize * AOstrength;
+
+	h1 = n + clamp(h1 - n, -PI / 2.0, PI / 2.0);
+	h2 = n + clamp(h2 - n, -PI / 2.0, PI / 2.0);
+
+	float visibility = IntegrateArc(h1, h2, n) * projNLen;
+	float occlusion = 1.0 - saturate(visibility) * AOstrength;
 
 	float fogColor = luma(TESR_FogColor.rgb);
-	float darkness = clamp(lerp(occlusion, fogColor, fogCoeff(origin.z)), occlusion, 1.0);
+	float darkness = clamp(lerp(occlusion, fogColor, fogCoeff(P.z)), occlusion, 1.0);
 
-	darkness = lerp(darkness, 1.0, saturate(invlerp(startFade, endFade, origin.z))) * color.x;
+	darkness = lerp(darkness, 1.0, saturate(invlerp(startFade, endFade, P.z))) * color.x;
 
 	return float2(darkness, 1.0).xxxy;
 }
@@ -206,13 +217,13 @@ technique
 	pass
 	{
 		VertexShader = compile vs_3_0 FrameVS();
-		PixelShader = compile ps_3_0 SSAO(io.xy);
+		PixelShader = compile ps_3_0 GTAO(0.0);
 	}
 
 	pass
 	{
 		VertexShader = compile vs_3_0 FrameVS();
-		PixelShader = compile ps_3_0 SSAO(io.yx);
+		PixelShader = compile ps_3_0 GTAO(1.0);
 	}
 
 #if halfres
