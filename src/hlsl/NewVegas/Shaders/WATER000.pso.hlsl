@@ -72,7 +72,7 @@ PS_OUTPUT main(PS_INPUT IN, float2 PixelPos : VPOS) {
 
     float refractionCoeff = (waterDepth.y * depthFog) * ((saturate(distance * 0.002) * (-4 + VarAmounts.w)) + 4);
     float4 reflectionPos = getReflectionSamplePosition(IN, surfaceNormal, refractionCoeff * exteriorRefractionModifier);
-    float4 reflection = linearize(sampleReflectionBlurred(ReflectionMap, reflectionPos, TESR_WaveParams.x));
+    float4 reflection = linearize(tex2Dproj(ReflectionMap, reflectionPos));
     float4 refractionPos = reflectionPos;
     refractionPos.y = refractionPos.w - reflectionPos.y;
     float3 refractedDepth = tex2Dproj(DepthMap, refractionPos).rgb * exteriorDepthModifier;
@@ -87,7 +87,6 @@ PS_OUTPUT main(PS_INPUT IN, float2 PixelPos : VPOS) {
     //color = getDiffuse(surfaceNormal, TESR_SunDirection.xyz, eyeDirection, distance, linHorizonColor, color);
     color = lerp(color, getFresnel(surfaceNormal, eyeDirection, reflection, TESR_WaveParams.w, color), smoothstep(0, 0.2, refractedDepth.x)); // reduce fresnel in low depths
     color = getSpecular(surfaceNormal, TESR_SunDirection.xyz, eyeDirection, linSunColor.rgb, color);
-    color.rgb = lerp(color.rgb, (1.0).xxx, getFoamMask(surfaceNormal, TESR_WaveParams.x, distance) * LODfade);
     color = lerp(getShoreFade(IN, waterDepth.x, TESR_WaterShorelineParams.x, TESR_WaterVolume.y, color), color, LODfade);
 
     color = delinearize(color);

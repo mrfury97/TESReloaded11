@@ -139,44 +139,6 @@ float4 getDiffuse(float3 surfaceNormal, float3 lightDir, float3 eyeDirection, fl
     return float4(result, 1);
 }
 
-// Roughness-based reflection blur. Real water scatters reflected light more as it gets
-// choppier, so a perfectly sharp mirror reflection only looks right on calm water. Reuses
-// choppiness (TESR_WaveParams.x) rather than the vanilla-provided VarAmounts.x glossiness --
-// choppiness is an NVR setting with a known, already-tuned range (~0.5-0.7 by default), and a
-// choppier wave slope causing blurrier reflections is the same physical relationship.
-// tex2Dproj isn't usable here since it doesn't take an explicit filter/tap offset, so the
-// perspective divide is done manually and a small fixed 5-tap box blur is used instead of
-// relying on mipmaps, which the reflection render target may not have.
-float4 sampleReflectionBlurred(sampler2D reflectionMap, float4 reflectionPos, float choppiness) {
-    float2 uv = reflectionPos.xy / reflectionPos.w;
-    float2 texel = TESR_ReciprocalResolution.xy * (1 + saturate(choppiness) * 6);
-
-    float4 result = tex2D(reflectionMap, uv) * 0.4;
-    result += tex2D(reflectionMap, uv + float2( texel.x,  texel.y)) * 0.15;
-    result += tex2D(reflectionMap, uv + float2(-texel.x,  texel.y)) * 0.15;
-    result += tex2D(reflectionMap, uv + float2( texel.x, -texel.y)) * 0.15;
-    result += tex2D(reflectionMap, uv + float2(-texel.x, -texel.y)) * 0.15;
-
-    return result;
-}
-
-// Approximate whitecap foam at wave crests. There's no real wave height/displacement data to
-// compute a proper Jacobian-based crest detector (the waves here are normal-map perturbation
-// only, no vertex displacement), so steep spots in the wave normal -- where it leans furthest
-// from straight up -- stand in for crests. Choppier water both foams more readily (lower
-// threshold) and foams more overall, matching choppiness's existing "sharper wave definition"
-// role elsewhere in this file.
-float getFoamMask(float3 surfaceNormal, float choppiness, float distance) {
-    float steepness = 1 - saturate(surfaceNormal.z);
-    float foamThreshold = lerp(0.85, 0.55, saturate(choppiness));
-    float foamMask = smoothstep(foamThreshold, 1.0, steepness);
-
-    float distanceFade = 1 - saturate(invlerp(2000, 4096, distance));
-    foamMask *= distanceFade * saturate(choppiness * 2);
-
-    return foamMask;
-}
-
 float4 getFresnel(float3 surfaceNormal, float3 eyeDirection, float4 reflection, float reflectivity, float4 color){
     // float4 getReflections(float3 surfaceNormal, eyeDirection, float4 reflection, float4 color){
     float fresnelCoeff = saturate(pow(1 - dot(eyeDirection, surfaceNormal), 5));
