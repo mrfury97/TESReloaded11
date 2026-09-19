@@ -2,7 +2,7 @@
 
 #define viewao 0
 #define halfres 0
-#define GTAO_MAX_STEPS 8 // upper bound for the runtime Steps slider's dynamic loop
+#define GTAO_STEPS 4
 
 float4 TESR_AmbientOcclusionAOData;
 float4 TESR_AmbientOcclusionData;
@@ -16,11 +16,11 @@ sampler2D TESR_SourceBuffer : register(s2) = sampler_state { ADDRESSU = CLAMP; A
 sampler2D TESR_BlueNoiseSampler : register(s3) < string ResourceName = "Effects\bluenoise256.dds"; > = sampler_state { ADDRESSU = WRAP; ADDRESSV = WRAP; MAGFILTER = NONE; MINFILTER = NONE; MIPFILTER = NONE; };
 sampler2D TESR_NormalsBuffer : register(s4) = sampler_state { ADDRESSU = CLAMP; ADDRESSV = CLAMP; MAGFILTER = NONE; MINFILTER = NONE; MIPFILTER = NONE; };
 
-static const float AOsteps = TESR_AmbientOcclusionAOData.x; // horizon-search steps per slice, runtime-tunable
+static const float AOsamples = TESR_AmbientOcclusionAOData.x;
 static const float AOstrength = TESR_AmbientOcclusionAOData.y;
 static const float AOclamp = TESR_AmbientOcclusionAOData.z;
 static const float AOrange = TESR_AmbientOcclusionAOData.w;
-static const float AOfalloff = TESR_AmbientOcclusionData.x; // softness of the Range cutoff: 0 hard, higher softer
+static const float AOangleBias = TESR_AmbientOcclusionData.x;
 static const float AOlumThreshold = TESR_AmbientOcclusionData.y;
 static const float blurDrop = TESR_AmbientOcclusionData.z;
 static const float blurRadius = TESR_AmbientOcclusionData.w;
@@ -120,37 +120,18 @@ float4 GTAO(VSOUT IN, uniform float pass2) : COLOR0
 	float h1 = -PI / 2.0; // furthest occluder found on the +orthoDir side
 	float h2 = PI / 2.0;  // furthest occluder found on the -orthoDir side
 
-	// Steps is runtime-tunable (not [unroll]'d -- ps_3_0 supports a dynamic
-	// trip count), clamped so a stray large value can't blow the shader's
-	// instruction budget.
-	int steps = clamp((int)AOsteps, 1, GTAO_MAX_STEPS);
-	float radiusSq = uRadius * uRadius;
-	float falloff = max(AOfalloff, 0.0);
-
-	for (int step = 1; step <= steps; ++step) {
-		float t = (step + noise) / steps;
+	[unroll]
+	for (int step = 1; step <= GTAO_STEPS; ++step) {
+		float t = (step + noise) / GTAO_STEPS;
 		float2 offset = sliceDir * t * uRadius * TESR_ReciprocalResolution.xy;
 
-		// Falloff softens the hard Range cutoff: a sample's pull on the
-		// horizon angle is weighted down as it nears uRadius instead of
-		// being an all-or-nothing cutoff. falloff=0 reproduces a hard
-		// cutoff (weight is 1 everywhere inside the radius, same as the
-		// old range check); higher values taper it off more gradually.
 		float3 hv1 = reconstructPosition(uv + offset) - P;
-		float d1 = dot(hv1, hv1);
-		if (d1 < radiusSq) {
-			float a1 = atan2(dot(hv1, orthoDir), dot(hv1, V));
-			float w1 = pow(saturate(1.0 - d1 / radiusSq), falloff);
-			h1 = max(h1, lerp(h1, a1, w1));
-		}
+		if (dot(hv1, hv1) < uRadius * uRadius)
+			h1 = max(h1, atan2(dot(hv1, orthoDir), dot(hv1, V)));
 
 		float3 hv2 = reconstructPosition(uv - offset) - P;
-		float d2 = dot(hv2, hv2);
-		if (d2 < radiusSq) {
-			float a2 = atan2(dot(hv2, orthoDir), dot(hv2, V));
-			float w2 = pow(saturate(1.0 - d2 / radiusSq), falloff);
-			h2 = min(h2, lerp(h2, a2, w2));
-		}
+		if (dot(hv2, hv2) < uRadius * uRadius)
+			h2 = min(h2, atan2(dot(hv2, orthoDir), dot(hv2, V)));
 	}
 
 	h1 = n + clamp(h1 - n, -PI / 2.0, PI / 2.0);

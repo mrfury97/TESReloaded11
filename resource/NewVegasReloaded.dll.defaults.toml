@@ -121,25 +121,25 @@ CoeffSunR = 1.0
 Enabled = false
 
 [_Shaders.AmbientOcclusion.Exteriors]
+AngleBias = 1.6                         # Value to increase the contribution of closer samples for more detail in creases.
 BlurDropThreshold = 8.0                 # Distance cutoff for areas that shouldn't be blurred together (edge aware denoise).
 BlurRadiusMultiplier = 2.0              # Blur radius to denoise AO.
 ClampStrength = 0.25                    # Lower limit to AO darkness (0 for pure black and 1 for pure white).
 Enabled = true                          # Enable Ambient occlusion in exteriors.
-Falloff = 1.0                           # Softens the Range cutoff: 0 is a hard cutoff, higher values taper it off more gradually.
 LumThreshold = 0.7                      # Treshold to reduce AO strength on bright surfaces.
 Range = 30.0                            # Distance for sampling. Larger values create a softer AO, smaller creates sharper details.
-Steps = 4                               # Horizon-search steps per slice (2 slices, one per pass). Higher = smoother, more expensive.
+Samples = 5                             # Not used (currently hardcoded).
 StrengthMultiplier = 1.0                # Global AO strength/darkness multiplier.
 
 [_Shaders.AmbientOcclusion.Interiors]
+AngleBias = 0.0                         # Value to increase the contribution of closer samples for more detail in creases.
 BlurDropThreshold = 8.0                 # Distance cutoff for areas that shouldn't be blurred together (edge aware denoise).
 BlurRadiusMultiplier = 2.0              # Blur radius to denoise AO.
 ClampStrength = 0.2                     # Lower limit to AO darkness (0 for pure black and 1 for pure white).
 Enabled = true                          # Enable Ambient occlusion in exteriors.
-Falloff = 1.0                           # Softens the Range cutoff: 0 is a hard cutoff, higher values taper it off more gradually.
 LumThreshold = 0.5                      # Treshold to reduce AO strength on bright surfaces.
 Range = 30.0                            # Distance for sampling. Larger values create a softer AO, smaller creates sharper details.
-Steps = 4                               # Horizon-search steps per slice (2 slices, one per pass). Higher = smoother, more expensive.
+Samples = 5                             # Not used (currently hardcoded).
 StrengthMultiplier = 1.0                # Global AO strength/darkness multiplier.
 
 [_Shaders.AmbientOcclusion.Status]
